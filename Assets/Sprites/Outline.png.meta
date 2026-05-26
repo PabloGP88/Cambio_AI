@@ -1,0 +1,1131 @@
+fileFormatVersion: 2
+guid: cce78bbf460884c1f8e12508c1f113e5
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 2201137540330868240
+    second: Contorner_0
+  - first:
+      213: -8445679212359046781
+    second: Contorner_1
+  - first:
+      213: -2707782202905333422
+    second: Contorner_2
+  - first:
+      213: -6186534501812237848
+    second: Contorner_3
+  - first:
+      213: 1034071008243451535
+    second: Contorner_4
+  - first:
+      213: -1434850707950321116
+    second: Contorner_5
+  - first:
+      213: 7278730957661171988
+    second: Contorner_6
+  - first:
+      213: 8655568062812499797
+    second: Contorner_7
+  - first:
+      213: 7249817482353815575
+    second: Contorner_8
+  - first:
+      213: -7611648358980732487
+    second: Contorner_9
+  - first:
+      213: 7933457862019709699
+    second: Contorner_10
+  - first:
+      213: -6228601973583770251
+    second: Contorner_11
+  - first:
+      213: 5272426843072042230
+    second: Contorner_12
+  - first:
+      213: -3101941427524836520
+    second: Contorner_13
+  - first:
+      213: -1585629335156101957
+    second: Contorner_14
+  - first:
+      213: -8256389370279568152
+    second: Contorner_15
+  - first:
+      213: 5058231613369442715
+    second: Contorner_16
+  - first:
+      213: 9193283696270250251
+    second: Contorner_17
+  - first:
+      213: -6636187515368455988
+    second: Contorner_18
+  - first:
+      213: 8460790994666035053
+    second: Contorner_19
+  - first:
+      213: -6249276241909717720
+    second: Contorner_20
+  - first:
+      213: -1222908422583392654
+    second: Contorner_21
+  - first:
+      213: 6196066499086151400
+    second: Contorner_22
+  - first:
+      213: 3943391671064300917
+    second: Contorner_23
+  - first:
+      213: -1422216367809056532
+    second: Contorner_24
+  - first:
+      213: -3694435137362655844
+    second: Contorner_25
+  - first:
+      213: 8496245898372877963
+    second: Contorner_26
+  - first:
+      213: 9120100148864151902
+    second: Contorner_27
+  - first:
+      213: 5134938693463049116
+    second: Contorner_28
+  - first:
+      213: 5588709500746895210
+    second: Contorner_29
+  - first:
+      213: -5206765576759613493
+    second: Contorner_30
+  - first:
+      213: -8484601458071357827
+    second: Contorner_31
+  - first:
+      213: 1025020876243404974
+    second: Contorner_32
+  - first:
+      213: 2788708010302381999
+    second: Contorner_33
+  - first:
+      213: 7235071963171142362
+    second: Contorner_34
+  - first:
+      213: 4506784243455977440
+    second: Contorner_35
+  - first:
+      213: -505217205667488286
+    second: Contorner_36
+  - first:
+      213: -8584571555174198411
+    second: Contorner_37
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 1024
+    resizeAlgorithm: 0
+    textureFormat: 12
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Contorner_0
+      rect:
+        serializedVersion: 2
+        x: 401
+        y: 4656
+        width: 311
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 01ec2394ee20c8e10800000000000000
+      internalID: 2201137540330868240
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_1
+      rect:
+        serializedVersion: 2
+        x: 889
+        y: 4666
+        width: 344
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3892074e08beaca80800000000000000
+      internalID: -8445679212359046781
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_2
+      rect:
+        serializedVersion: 2
+        x: 1410
+        y: 4666
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 251f3b2de660c6ad0800000000000000
+      internalID: -2707782202905333422
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_3
+      rect:
+        serializedVersion: 2
+        x: 1931
+        y: 4666
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8e988c4f5a3052aa0800000000000000
+      internalID: -6186534501812237848
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_4
+      rect:
+        serializedVersion: 2
+        x: 2452
+        y: 4666
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f8681ee6a12c95e00800000000000000
+      internalID: 1034071008243451535
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_5
+      rect:
+        serializedVersion: 2
+        x: 2973
+        y: 4666
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 42247ee12e2661ce0800000000000000
+      internalID: -1434850707950321116
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_6
+      rect:
+        serializedVersion: 2
+        x: 3494
+        y: 4666
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 411780bdd3f330560800000000000000
+      internalID: 7278730957661171988
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_7
+      rect:
+        serializedVersion: 2
+        x: 4014
+        y: 4666
+        width: 344
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 55fa7214b41ce1870800000000000000
+      internalID: 8655568062812499797
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_8
+      rect:
+        serializedVersion: 2
+        x: 4535
+        y: 4656
+        width: 311
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 710bd1ac6968c9460800000000000000
+      internalID: 7249817482353815575
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_9
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 4443
+        width: 221
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9b9b4cf452efd5690800000000000000
+      internalID: -7611648358980732487
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_10
+      rect:
+        serializedVersion: 2
+        x: 4943
+        y: 4443
+        width: 221
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 30bf63a64ed491e60800000000000000
+      internalID: 7933457862019709699
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_11
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 4035
+        width: 91
+        height: 311
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 57d0e3d618f8f89a0800000000000000
+      internalID: -6228601973583770251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_12
+      rect:
+        serializedVersion: 2
+        x: 5156
+        y: 4035
+        width: 91
+        height: 311
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f41b8d774c6b2940800000000000000
+      internalID: 5272426843072042230
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_13
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 3511
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 853605ad4b0b3f4d0800000000000000
+      internalID: -3101941427524836520
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_14
+      rect:
+        serializedVersion: 2
+        x: 5166
+        y: 3511
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bbce49c4586bef9e0800000000000000
+      internalID: -1585629335156101957
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_15
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 2987
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8ecdc29ac996b6d80800000000000000
+      internalID: -8256389370279568152
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_16
+      rect:
+        serializedVersion: 2
+        x: 5166
+        y: 2987
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b91698a4ad2723640800000000000000
+      internalID: 5058231613369442715
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_17
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 2463
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b01149b40da159f70800000000000000
+      internalID: 9193283696270250251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_18
+      rect:
+        serializedVersion: 2
+        x: 5166
+        y: 2463
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cc0c4936d9687e3a0800000000000000
+      internalID: -6636187515368455988
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_19
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 1939
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d6794eb1594ca6570800000000000000
+      internalID: 8460790994666035053
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_20
+      rect:
+        serializedVersion: 2
+        x: 5166
+        y: 1939
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 825eea93e5c1649a0800000000000000
+      internalID: -6249276241909717720
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_21
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 1415
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2766517d44b570fe0800000000000000
+      internalID: -1222908422583392654
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_22
+      rect:
+        serializedVersion: 2
+        x: 5166
+        y: 1415
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8ee6aba17a9dcf550800000000000000
+      internalID: 6196066499086151400
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_23
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 891
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 57d8504f4ddb9b630800000000000000
+      internalID: 3943391671064300917
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_24
+      rect:
+        serializedVersion: 2
+        x: 5166
+        y: 891
+        width: 81
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ce0befaafb5434ce0800000000000000
+      internalID: -1422216367809056532
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_25
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 401
+        width: 91
+        height: 311
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c9507c701dababcc0800000000000000
+      internalID: -3694435137362655844
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_26
+      rect:
+        serializedVersion: 2
+        x: 5156
+        y: 401
+        width: 91
+        height: 311
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b8e82e821aab8e570800000000000000
+      internalID: 8496245898372877963
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_27
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 83
+        width: 221
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e51f809d3ca119e70800000000000000
+      internalID: 9120100148864151902
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_28
+      rect:
+        serializedVersion: 2
+        x: 401
+        y: 0
+        width: 311
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c93064f1987f24740800000000000000
+      internalID: 5134938693463049116
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_29
+      rect:
+        serializedVersion: 2
+        x: 4535
+        y: 0
+        width: 311
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a6f8ed04ea51f8d40800000000000000
+      internalID: 5588709500746895210
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_30
+      rect:
+        serializedVersion: 2
+        x: 4943
+        y: 83
+        width: 221
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc7e2886b4addb7b0800000000000000
+      internalID: -5206765576759613493
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_31
+      rect:
+        serializedVersion: 2
+        x: 889
+        y: 0
+        width: 344
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d7635ee5de3a04a80800000000000000
+      internalID: -8484601458071357827
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_32
+      rect:
+        serializedVersion: 2
+        x: 1410
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ea809df5e0b993e00800000000000000
+      internalID: 1025020876243404974
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_33
+      rect:
+        serializedVersion: 2
+        x: 1931
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: faf1c50092b73b620800000000000000
+      internalID: 2788708010302381999
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_34
+      rect:
+        serializedVersion: 2
+        x: 2452
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ada34311e93286460800000000000000
+      internalID: 7235071963171142362
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_35
+      rect:
+        serializedVersion: 2
+        x: 2973
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e7658634605b8e30800000000000000
+      internalID: 4506784243455977440
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_36
+      rect:
+        serializedVersion: 2
+        x: 3494
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2ed16c1d0ab1df8f0800000000000000
+      internalID: -505217205667488286
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Contorner_37
+      rect:
+        serializedVersion: 2
+        x: 4014
+        y: 0
+        width: 344
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5735be057a97dd880800000000000000
+      internalID: -8584571555174198411
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Contorner_0: 2201137540330868240
+      Contorner_1: -8445679212359046781
+      Contorner_10: 7933457862019709699
+      Contorner_11: -6228601973583770251
+      Contorner_12: 5272426843072042230
+      Contorner_13: -3101941427524836520
+      Contorner_14: -1585629335156101957
+      Contorner_15: -8256389370279568152
+      Contorner_16: 5058231613369442715
+      Contorner_17: 9193283696270250251
+      Contorner_18: -6636187515368455988
+      Contorner_19: 8460790994666035053
+      Contorner_2: -2707782202905333422
+      Contorner_20: -6249276241909717720
+      Contorner_21: -1222908422583392654
+      Contorner_22: 6196066499086151400
+      Contorner_23: 3943391671064300917
+      Contorner_24: -1422216367809056532
+      Contorner_25: -3694435137362655844
+      Contorner_26: 8496245898372877963
+      Contorner_27: 9120100148864151902
+      Contorner_28: 5134938693463049116
+      Contorner_29: 5588709500746895210
+      Contorner_3: -6186534501812237848
+      Contorner_30: -5206765576759613493
+      Contorner_31: -8484601458071357827
+      Contorner_32: 1025020876243404974
+      Contorner_33: 2788708010302381999
+      Contorner_34: 7235071963171142362
+      Contorner_35: 4506784243455977440
+      Contorner_36: -505217205667488286
+      Contorner_37: -8584571555174198411
+      Contorner_4: 1034071008243451535
+      Contorner_5: -1434850707950321116
+      Contorner_6: 7278730957661171988
+      Contorner_7: 8655568062812499797
+      Contorner_8: 7249817482353815575
+      Contorner_9: -7611648358980732487
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
