@@ -4087,7 +4087,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 958496765}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 958496769}
+        m_TargetAssemblyTypeName: Deck, Assembly-CSharp
+        m_MethodName: PlayerDrawCard
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &958496769
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4156,6 +4168,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 1ab65abcd407c4f4791aa498c97b6e7b, type: 3}
   - {fileID: 21300000, guid: 1ab65abcd407c4f4791aa498c97b6e7b, type: 3}
   cardBack: {fileID: 21300000, guid: 956ce96cf17774d7a84606fee61f0d4b, type: 3}
+  gameManager: {fileID: 2142519798}
 --- !u!1 &986142577
 GameObject:
   m_ObjectHideFlags: 0
@@ -7688,6 +7701,7 @@ MonoBehaviour:
   cardLeft: {fileID: 926296196}
   cardRight: {fileID: 1165433118}
   selectingView: {fileID: 809364606}
+  cardSelectingView: {fileID: 1473679073}
 --- !u!4 &2142519799
 Transform:
   m_ObjectHideFlags: 0

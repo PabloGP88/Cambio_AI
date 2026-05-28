@@ -34,6 +34,7 @@ public class GameManager : MonoBehaviour
     
     [Header("Selecting View References")]
     [SerializeField] private GameObject selectingView;
+    [SerializeField] private Image cardSelectingView;
 
 
     private string playerTurnText = "Your Turn!";
@@ -95,6 +96,12 @@ public class GameManager : MonoBehaviour
         initialCardsView.SetActive(false);
         turnUI.SetActive(true);
         SetPhase(GamePhase.PlayerTurn);    
+    }
+
+    public void DrawCard(Card card)
+    {
+        cardSelectingView.sprite = card.sprite;
+        selectingView.SetActive(true);
     }
     
     // ----------------------------------------------------------------------------------------------------------------- Game States Methods

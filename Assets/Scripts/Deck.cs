@@ -4,6 +4,7 @@ public class Deck : MonoBehaviour
 {
     [SerializeField] private Sprite[] cardSprites; // 54 sprites
     [SerializeField] private Sprite cardBack;
+    [SerializeField] private GameManager gameManager;
 
     private Card[] shuffledDeck;
     private int topIndex = 0;
@@ -38,6 +39,11 @@ public class Deck : MonoBehaviour
     {
         if (topIndex >= shuffledDeck.Length) return null;
         return shuffledDeck[topIndex++];
+    }
+
+    public void PlayerDrawCard()
+    {
+        gameManager.DrawCard(DrawCard());
     }
 
     private int GetNumber(int index)
