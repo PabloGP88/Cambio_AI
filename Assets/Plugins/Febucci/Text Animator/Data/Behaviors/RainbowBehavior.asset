@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: RainbowBehavior
   m_EditorClassIdentifier: Febucci.TextAnimator.Runtime::Febucci.UI.Effects.RainbowBehavior
   tagID: rainb
-  baseFrequency: 0.5
+  baseFrequency: 0.2
   baseWaveSize: 0.08

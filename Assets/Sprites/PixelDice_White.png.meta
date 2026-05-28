@@ -1,0 +1,1081 @@
+fileFormatVersion: 2
+guid: 2028c740e376d4939ab7c13c588d005b
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -7223252654011275279
+    second: PixelDice_White_0
+  - first:
+      213: -5014350313817657811
+    second: PixelDice_White_1
+  - first:
+      213: -4072334983463672055
+    second: PixelDice_White_2
+  - first:
+      213: 1455192254139053639
+    second: PixelDice_White_3
+  - first:
+      213: 2849159749516909371
+    second: PixelDice_White_4
+  - first:
+      213: -7126440156214949731
+    second: PixelDice_White_5
+  - first:
+      213: -140691640235576637
+    second: PixelDice_White_6
+  - first:
+      213: 7470103826044642568
+    second: PixelDice_White_7
+  - first:
+      213: -7882808614808917311
+    second: PixelDice_White_8
+  - first:
+      213: -3972515209744357850
+    second: PixelDice_White_9
+  - first:
+      213: 6371293433881238646
+    second: PixelDice_White_10
+  - first:
+      213: -46896413441513745
+    second: PixelDice_White_11
+  - first:
+      213: -5969780006668358776
+    second: PixelDice_White_12
+  - first:
+      213: -4215453096093010329
+    second: PixelDice_White_13
+  - first:
+      213: -6627441973975610671
+    second: PixelDice_White_14
+  - first:
+      213: 4330327966975571879
+    second: PixelDice_White_15
+  - first:
+      213: 4058120383821406931
+    second: PixelDice_White_16
+  - first:
+      213: 6626372695726098654
+    second: PixelDice_White_17
+  - first:
+      213: -5872430175172430469
+    second: PixelDice_White_18
+  - first:
+      213: 6978060305123174011
+    second: PixelDice_White_19
+  - first:
+      213: -8769650416821470846
+    second: PixelDice_White_20
+  - first:
+      213: -7895825896579843130
+    second: PixelDice_White_21
+  - first:
+      213: -359823074426430008
+    second: PixelDice_White_22
+  - first:
+      213: -6647941893113460819
+    second: PixelDice_White_23
+  - first:
+      213: 2371301518219960329
+    second: PixelDice_White_24
+  - first:
+      213: 3454716886428970777
+    second: PixelDice_White_25
+  - first:
+      213: 6714668603855855621
+    second: PixelDice_White_26
+  - first:
+      213: -6361415716036722784
+    second: PixelDice_White_27
+  - first:
+      213: -1028175919814018006
+    second: PixelDice_White_28
+  - first:
+      213: -7394834296387647593
+    second: PixelDice_White_29
+  - first:
+      213: -7522647589380608306
+    second: PixelDice_White_30
+  - first:
+      213: -6687597528370087818
+    second: PixelDice_White_31
+  - first:
+      213: 2892770383959502137
+    second: PixelDice_White_32
+  - first:
+      213: -5605061212398645980
+    second: PixelDice_White_33
+  - first:
+      213: 3523080804239434469
+    second: PixelDice_White_34
+  - first:
+      213: 4098970362507960527
+    second: PixelDice_White_35
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: PixelDice_White_0
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 142
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f7a2ca4bf9d1cb90800000000000000
+      internalID: -7223252654011275279
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_1
+      rect:
+        serializedVersion: 2
+        x: 30
+        y: 142
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2ea78de4f2796ab0800000000000000
+      internalID: -5014350313817657811
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_2
+      rect:
+        serializedVersion: 2
+        x: 58
+        y: 142
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9076040a8e82c77c0800000000000000
+      internalID: -4072334983463672055
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_3
+      rect:
+        serializedVersion: 2
+        x: 86
+        y: 142
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 746bbdb25a1e13410800000000000000
+      internalID: 1455192254139053639
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_4
+      rect:
+        serializedVersion: 2
+        x: 114
+        y: 142
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b3bdb4a52bf3a8720800000000000000
+      internalID: 2849159749516909371
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_5
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 142
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d988ab77f6cc91d90800000000000000
+      internalID: -7126440156214949731
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_6
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 114
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3c234e8d2b92c0ef0800000000000000
+      internalID: -140691640235576637
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_7
+      rect:
+        serializedVersion: 2
+        x: 30
+        y: 114
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8056daaf9d32ba760800000000000000
+      internalID: 7470103826044642568
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_8
+      rect:
+        serializedVersion: 2
+        x: 58
+        y: 114
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1caece96453aa9290800000000000000
+      internalID: -7882808614808917311
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_9
+      rect:
+        serializedVersion: 2
+        x: 86
+        y: 114
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 626e95ac67aced8c0800000000000000
+      internalID: -3972515209744357850
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_10
+      rect:
+        serializedVersion: 2
+        x: 114
+        y: 114
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 67c154e1f916b6850800000000000000
+      internalID: 6371293433881238646
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_11
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 114
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fe6249fd5f3695ff0800000000000000
+      internalID: -46896413441513745
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_12
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 86
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 88bad4396b4172da0800000000000000
+      internalID: -5969780006668358776
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_13
+      rect:
+        serializedVersion: 2
+        x: 30
+        y: 86
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7663e085eb3bf75c0800000000000000
+      internalID: -4215453096093010329
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_14
+      rect:
+        serializedVersion: 2
+        x: 58
+        y: 86
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1da8bab63a89604a0800000000000000
+      internalID: -6627441973975610671
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_15
+      rect:
+        serializedVersion: 2
+        x: 86
+        y: 86
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a7b488c75a681c30800000000000000
+      internalID: 4330327966975571879
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_16
+      rect:
+        serializedVersion: 2
+        x: 114
+        y: 86
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d2627dfcf6515830800000000000000
+      internalID: 4058120383821406931
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_17
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 86
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ed80a16dbda95fb50800000000000000
+      internalID: 6626372695726098654
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_18
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 58
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b75ff808edfe08ea0800000000000000
+      internalID: -5872430175172430469
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_19
+      rect:
+        serializedVersion: 2
+        x: 30
+        y: 58
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b76ee1c40ec07d060800000000000000
+      internalID: 6978060305123174011
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_20
+      rect:
+        serializedVersion: 2
+        x: 58
+        y: 58
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 289fff4d861fb4680800000000000000
+      internalID: -8769650416821470846
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_21
+      rect:
+        serializedVersion: 2
+        x: 86
+        y: 58
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6cb37025e246c6290800000000000000
+      internalID: -7895825896579843130
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_22
+      rect:
+        serializedVersion: 2
+        x: 114
+        y: 58
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8cdd2daf1d6a10bf0800000000000000
+      internalID: -359823074426430008
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_23
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 58
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: da7c88d0214cdb3a0800000000000000
+      internalID: -6647941893113460819
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_24
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 29
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 90068d8ca2e88e020800000000000000
+      internalID: 2371301518219960329
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_25
+      rect:
+        serializedVersion: 2
+        x: 30
+        y: 29
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 91f642f44be91ff20800000000000000
+      internalID: 3454716886428970777
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_26
+      rect:
+        serializedVersion: 2
+        x: 58
+        y: 29
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 500eb45f48b4f2d50800000000000000
+      internalID: 6714668603855855621
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_27
+      rect:
+        serializedVersion: 2
+        x: 86
+        y: 29
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0af3b094c16b7b7a0800000000000000
+      internalID: -6361415716036722784
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_28
+      rect:
+        serializedVersion: 2
+        x: 114
+        y: 29
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a2cffdcc27f2bb1f0800000000000000
+      internalID: -1028175919814018006
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_29
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 29
+        width: 24
+        height: 24
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 79740fe0365406990800000000000000
+      internalID: -7394834296387647593
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_30
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 0
+        width: 26
+        height: 28
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ece2588cfdf2a9790800000000000000
+      internalID: -7522647589380608306
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_31
+      rect:
+        serializedVersion: 2
+        x: 29
+        y: 0
+        width: 26
+        height: 28
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 67878b8fa71e033a0800000000000000
+      internalID: -6687597528370087818
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_32
+      rect:
+        serializedVersion: 2
+        x: 57
+        y: 1
+        width: 26
+        height: 26
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 93d2da0765f252820800000000000000
+      internalID: 2892770383959502137
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_33
+      rect:
+        serializedVersion: 2
+        x: 85
+        y: 0
+        width: 26
+        height: 28
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 42d88a23682d632b0800000000000000
+      internalID: -5605061212398645980
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_34
+      rect:
+        serializedVersion: 2
+        x: 113
+        y: 0
+        width: 26
+        height: 28
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5e260bb435f74e030800000000000000
+      internalID: 3523080804239434469
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PixelDice_White_35
+      rect:
+        serializedVersion: 2
+        x: 140
+        y: 0
+        width: 28
+        height: 28
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc02422d3d772e830800000000000000
+      internalID: 4098970362507960527
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 9a925ae37abf34f6f9ea421a99d36e22
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":16.0,"y":16.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      PixelDice_White_0: -7223252654011275279
+      PixelDice_White_1: -5014350313817657811
+      PixelDice_White_10: 6371293433881238646
+      PixelDice_White_11: -46896413441513745
+      PixelDice_White_12: -5969780006668358776
+      PixelDice_White_13: -4215453096093010329
+      PixelDice_White_14: -6627441973975610671
+      PixelDice_White_15: 4330327966975571879
+      PixelDice_White_16: 4058120383821406931
+      PixelDice_White_17: 6626372695726098654
+      PixelDice_White_18: -5872430175172430469
+      PixelDice_White_19: 6978060305123174011
+      PixelDice_White_2: -4072334983463672055
+      PixelDice_White_20: -8769650416821470846
+      PixelDice_White_21: -7895825896579843130
+      PixelDice_White_22: -359823074426430008
+      PixelDice_White_23: -6647941893113460819
+      PixelDice_White_24: 2371301518219960329
+      PixelDice_White_25: 3454716886428970777
+      PixelDice_White_26: 6714668603855855621
+      PixelDice_White_27: -6361415716036722784
+      PixelDice_White_28: -1028175919814018006
+      PixelDice_White_29: -7394834296387647593
+      PixelDice_White_3: 1455192254139053639
+      PixelDice_White_30: -7522647589380608306
+      PixelDice_White_31: -6687597528370087818
+      PixelDice_White_32: 2892770383959502137
+      PixelDice_White_33: -5605061212398645980
+      PixelDice_White_34: 3523080804239434469
+      PixelDice_White_35: 4098970362507960527
+      PixelDice_White_4: 2849159749516909371
+      PixelDice_White_5: -7126440156214949731
+      PixelDice_White_6: -140691640235576637
+      PixelDice_White_7: 7470103826044642568
+      PixelDice_White_8: -7882808614808917311
+      PixelDice_White_9: -3972515209744357850
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
