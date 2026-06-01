@@ -1,6 +1,4 @@
-using System;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class CardSlot : MonoBehaviour
 {
@@ -13,6 +11,14 @@ public class CardSlot : MonoBehaviour
         Card = card;
         SlotIndex = index;
         BelongsToPlayer = isPlayer;
+    }
+
+    // Returns the card that was here before the swap
+    public Card SwapCard(Card incoming)
+    {
+        Card previous = Card;
+        Card = incoming;
+        return previous;
     }
 
     public void OnClicked()

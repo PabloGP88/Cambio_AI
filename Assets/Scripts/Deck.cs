@@ -1,13 +1,18 @@
+
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Deck : MonoBehaviour
 {
-    [SerializeField] private Sprite[] cardSprites; // 54 sprites
+    [SerializeField] private Sprite[] cardSprites; // 54 sprites ordered: clubs A-K, diamonds A-K, hearts A-K, spades A-K, joker x2
     [SerializeField] private Sprite cardBack;
-    [SerializeField] private GameManager gameManager;
 
     private Card[] shuffledDeck;
     private int topIndex = 0;
+    private Stack<Card> discardPile = new();
+
+    public Sprite CardBack => cardBack;
+    public Card TopDiscard => discardPile.Count > 0 ? discardPile.Peek() : null;
 
     void Awake()
     {
@@ -27,7 +32,6 @@ public class Deck : MonoBehaviour
             };
         }
 
-        // Fisher-Yates Algorithm
         for (int i = shuffledDeck.Length - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);
@@ -35,27 +39,34 @@ public class Deck : MonoBehaviour
         }
     }
 
-    public Card DrawCard()
+    // Draw from the top of the draw pile
+    public Card DrawFromDeck()
     {
         if (topIndex >= shuffledDeck.Length) return null;
         return shuffledDeck[topIndex++];
     }
 
-    public void PlayerDrawCard()
+    // Draw the top card from the discard pile
+    public Card DrawFromDiscard()
     {
-        gameManager.DrawCard(DrawCard());
+        return discardPile.Count > 0 ? discardPile.Pop() : null;
+    }
+
+    public void Discard(Card card)
+    {
+        discardPile.Push(card);
     }
 
     private int GetNumber(int index)
     {
-        if (index >= 52) return 0; // Joker
-        return (index % 13) + 1;  // 1–13
+        if (index >= 52) return 0;
+        return (index % 13) + 1;
     }
 
     private bool GetIsRed(int index)
     {
         if (index >= 52) return false;
-        int suit = index / 13; // 0=clubs, 1=diamonds, 2=hearts, 3=spades
+        int suit = index / 13;
         return suit == 1 || suit == 2;
     }
 }
