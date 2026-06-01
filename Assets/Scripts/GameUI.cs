@@ -21,6 +21,10 @@ public class GameUI : MonoBehaviour
     [Header("Drawn Card UI")]
     [SerializeField] private GameObject drawnCardView;
     [SerializeField] private Image drawnCardImage;
+    
+    [Header("Slot Revealed UI")]
+    [SerializeField] private GameObject slotRevealedUI;
+    [SerializeField] private Image slotRevealedImage;
 
     [Header("Discard Pile UI")]
     [SerializeField] private Image discardTopImage;
@@ -76,6 +80,12 @@ public class GameUI : MonoBehaviour
 
     // Called by the "Cambio" button
     public void OnCambioPressed() => gm.CallCambio();
+    
+    public void OnHidePeekedCardPressed()
+    {
+        slotRevealedUI.SetActive(false);
+        gm.FinishPeeking();
+    }
 
     // -------------------------------------------------------------------------
     // Event handlers
@@ -128,9 +138,10 @@ public class GameUI : MonoBehaviour
 
     private void HandleSlotRevealed(CardSlot slot)
     {
-        // Slot visual reveal is handled by the CardSlot's own display component;
-        // GameUI just needs to know so it can update any overlay/prompt text.
-        // Extend here when you add per-slot visuals.
+        if (!gm.IsPlayerTurn) return;
+        
+        slotRevealedImage.sprite = slot.Card.sprite;
+        slotRevealedUI.SetActive(true);
     }
 
     private void HandleSlotsSwapped(CardSlot a, CardSlot b)
@@ -161,7 +172,9 @@ public class GameUI : MonoBehaviour
 
     private void RefreshDiscardDisplay()
     {
-        discardTopImage.sprite = deck.TopDiscard.sprite;
+        discardTopImage.sprite = deck.TopDiscard != null 
+            ? deck.TopDiscard.sprite 
+            : emptyDiscardSprite;    
     }
 
     private void ShowPowerPrompt()

@@ -1,5 +1,7 @@
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public enum GamePhase
 {
@@ -222,7 +224,6 @@ public class GameManager : MonoBehaviour
                 if (IsPlayerTurn && !slot.BelongsToPlayer) return;
                 if (!IsPlayerTurn && slot.BelongsToPlayer) return;
                 OnSlotRevealed?.Invoke(slot);
-                EndTurn();
                 break;
 
             case PowerStep.LookingOpponent:
@@ -236,10 +237,7 @@ public class GameManager : MonoBehaviour
                     powerSourceSlot = slot;
                     CurrentPowerStep = PowerStep.SelectingPowerSwapTarget;
                 }
-                else
-                {
-                    EndTurn();
-                }
+
                 break;
 
             case PowerStep.SelectingPowerSwapSource:
@@ -257,9 +255,33 @@ public class GameManager : MonoBehaviour
                 break;
         }
     }
+    
+    public void FinishPeeking()
+    {
+        if (CurrentPhase != GamePhase.UsingPower) return;
+
+        if (ActivePower == CardPower.LookAndSwap)
+        {
+            CurrentPowerStep = PowerStep.SelectingPowerSwapTarget;
+        }
+        else
+        {
+            EndTurn();
+        }
+    }
 
     public Deck Getdeck()
     {
         return deck;
+    }
+
+    private void Update()
+    {
+        print(CurrentPhase);
+
+        if (Keyboard.current.rKey.isPressed)
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
     }
 }
