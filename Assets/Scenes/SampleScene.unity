@@ -1208,7 +1208,7 @@ GameObject:
   - component: {fileID: 280976614}
   - component: {fileID: 280976613}
   m_Layer: 5
-  m_Name: Done-Button
+  m_Name: Hide-Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1299,7 +1299,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 280976615}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2142519800}
+        m_TargetAssemblyTypeName: GameUI, Assembly-CSharp
+        m_MethodName: OnHidePeekedCardPressed
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &280976615
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6954,7 +6966,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1640450826}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2142519800}
+        m_TargetAssemblyTypeName: GameUI, Assembly-CSharp
+        m_MethodName: OnSwapDrawnPressed
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1640450826
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7971,6 +7995,18 @@ MonoBehaviour:
   slotRevealedImage: {fileID: 1522305120}
   discardTopImage: {fileID: 1689963770}
   emptyDiscardSprite: {fileID: 21300000, guid: 8fe2370c8d3e5457dbfe9c7c6cd29d5b, type: 3}
+  playerSlotArrowsUI: {fileID: 1561046447}
+  aiSlotArrowsUI: {fileID: 43669747}
+  slotArrowsPlayer:
+  - {fileID: 353051043}
+  - {fileID: 1079440006}
+  - {fileID: 52684766}
+  - {fileID: 884969211}
+  slotArrowsAI:
+  - {fileID: 703123385}
+  - {fileID: 1524498004}
+  - {fileID: 1717717044}
+  - {fileID: 780184380}
   gameOverPanel: {fileID: 0}
   gameOverText: {fileID: 0}
 --- !u!1660057539 &9223372036854775807

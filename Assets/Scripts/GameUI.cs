@@ -30,6 +30,13 @@ public class GameUI : MonoBehaviour
     [SerializeField] private Image discardTopImage;
     [SerializeField] private Sprite emptyDiscardSprite;
 
+    [Header("Slot Arrows UI")]
+    [SerializeField] private GameObject playerSlotArrowsUI;
+    [SerializeField] private GameObject aiSlotArrowsUI;
+    
+    [SerializeField] private GameObject[] slotArrowsPlayer;
+    [SerializeField] private GameObject[] slotArrowsAI;
+
     [Header("Game Over UI")]
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TextMeshProUGUI gameOverText;
@@ -115,8 +122,7 @@ public class GameUI : MonoBehaviour
                 break;
 
             case GamePhase.SelectingSwapSlot:
-                // Card view stays visible so player can see what they are swapping in
-                drawnCardView.SetActive(true);
+                drawnCardView.SetActive(false);
                 break;
 
             case GamePhase.UsingPower:
