@@ -1,22 +1,32 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 public enum GamePhase
 {
-    Dealing,            // Cards being distributed, player peeks 2
-    DrawingCard,        // Active player must draw (from deck or discard)
-    CardDrawn,          // Card in hand — choose to discard or swap into a slot
-    SelectingSwapSlot,  // Player chose to swap — now picking which slot
-    DiscardingDrawn,    // Card going to discard — power triggers if applicable
-    UsingPower,         // Resolving a card power (look/swap)
-    CambioCalled,       // Cambio declared — each other player gets one last turn
+    Dealing,
+    DrawingCard,
+    CardDrawn,
+    SelectingSwapSlot,
+    DiscardingDrawn,
+    UsingPower,
+    CambioCalled,
     GameOver
 }
 
-// Describes which step within a two-step power we're on (e.g. LookAndSwap: look first, then optionally swap)
-public enum PowerStep { None, LookingOwn, LookingOpponent, SelectingPowerSwapSource, SelectingPowerSwapTarget }
+public enum PowerStep
+{
+    None,
+    LookingOwn,
+    LookingOpponent,
+    SelectingPowerSwapSource,
+    SelectingPowerSwapTarget,
+    SelectingTradeOpponent,
+    SelectingTradeOwn,
+    ConfirmingTrade
+}
 
 public class GameManager : MonoBehaviour
 {
@@ -33,16 +43,35 @@ public class GameManager : MonoBehaviour
     public CardPower ActivePower { get; private set; }
     public PowerStep CurrentPowerStep { get; private set; }
 
-    // Who called Cambio and how many turns remain in the final round
     public bool CambioHasBeenCalled { get; private set; }
     public bool IsPlayerCambioCaller { get; private set; }
     public int FinalRoundTurnsLeft { get; private set; }
 
-    // UI and AI subscribe to these
-    public event Action<GamePhase, bool> OnPhaseChanged;   // phase, isPlayerTurn
-    public event Action<Card> OnCardDrawn;                 // the drawn card
-    public event Action<CardSlot> OnSlotRevealed;          // a slot was peeked
-    public event Action<CardSlot, CardSlot> OnSlotsSwapped; // two slots were swapped
+    public bool MatchedThisTurn => _matchedThisTurn;
+    public bool AwaitingGiveCard => _awaitingGiveCard;
+
+    public event Action<GamePhase, bool> OnPhaseChanged;
+    public event Action<Card> OnCardDrawn;
+    public event Action<CardSlot> OnSlotRevealed;
+    public event Action<CardSlot, CardSlot> OnSlotsSwapped;
+    public event Action<CardSlot, CardSlot> OnInformedTradeReady;
+    public event Action<CardSlot, bool, bool> OnMatchResolved;
+    public event Action<bool> OnAwaitingGiveCard;
+    public event Action OnGiveCardDone;
+    public event Action<bool, int> OnPenaltyAdded;
+
+    private CardSlot _powerSourceSlot;
+    private CardSlot _tradeOpponentSlot;
+    private CardSlot _tradeOwnSlot;
+
+    private bool _matchedThisTurn;
+    private CardSlot _armedMatchSlot;
+    private bool _awaitingGiveCard;
+    private bool _giveByPlayer;
+    private CardSlot _opponentMatchedSlot;
+
+    private readonly List<Card> _playerPenalties = new();
+    private readonly List<Card> _aiPenalties = new();
 
     void Awake()
     {
@@ -54,38 +83,33 @@ public class GameManager : MonoBehaviour
         DealInitialHands();
     }
 
-    // -------------------------------------------------------------------------
-    // Public API — both the player (via UI clicks) and the AI call these
-    // -------------------------------------------------------------------------
-
     public void SetPhase(GamePhase phase, bool playerTurn)
     {
+        if (phase != GamePhase.DrawingCard) ClearArmedSlot();
         IsPlayerTurn = playerTurn;
         CurrentPhase = phase;
         OnPhaseChanged?.Invoke(phase, playerTurn);
     }
 
-    // Draw from the face-down deck
     public void DrawFromDeck()
     {
-        print(CurrentPhase);
         if (CurrentPhase != GamePhase.DrawingCard) return;
+        if (_awaitingGiveCard) return;
         DrawnCard = deck.DrawFromDeck();
         SetPhase(GamePhase.CardDrawn, IsPlayerTurn);
         OnCardDrawn?.Invoke(DrawnCard);
     }
 
-    // Draw the top card of the discard pile
     public void DrawFromDiscard()
     {
         if (CurrentPhase != GamePhase.DrawingCard) return;
+        if (_awaitingGiveCard) return;
         DrawnCard = deck.DrawFromDiscard();
         if (DrawnCard == null) return;
         SetPhase(GamePhase.CardDrawn, IsPlayerTurn);
         OnCardDrawn?.Invoke(DrawnCard);
     }
 
-    // Discard the drawn card (and trigger its power if it has one)
     public void DiscardDrawnCard()
     {
         if (CurrentPhase != GamePhase.CardDrawn) return;
@@ -99,14 +123,12 @@ public class GameManager : MonoBehaviour
             EndTurn();
     }
 
-    // Announce intent to swap the drawn card into a hand slot
     public void BeginSwapDrawnCard()
     {
         if (CurrentPhase != GamePhase.CardDrawn) return;
         SetPhase(GamePhase.SelectingSwapSlot, IsPlayerTurn);
     }
 
-    // Slot clicked — meaning depends on current phase
     public void OnSlotClicked(CardSlot slot)
     {
         switch (CurrentPhase)
@@ -118,16 +140,22 @@ public class GameManager : MonoBehaviour
             case GamePhase.UsingPower:
                 HandlePowerSlotSelection(slot);
                 break;
+
+            case GamePhase.DrawingCard:
+                if (_awaitingGiveCard)
+                    HandleGiveCardSelection(slot, true);
+                else
+                    HandleMatchClick(slot);
+                break;
         }
     }
 
-    // Call Cambio instead of drawing — only at the start of your turn
     public void CallCambio()
     {
         if (CurrentPhase != GamePhase.DrawingCard) return;
+        if (_awaitingGiveCard) return;
         CambioHasBeenCalled = true;
         IsPlayerCambioCaller = IsPlayerTurn;
-        // Each opponent gets one more turn; for a 2-player game that is 1 turn
         FinalRoundTurnsLeft = 1;
         SetPhase(GamePhase.CambioCalled, IsPlayerTurn);
         EndTurn();
@@ -138,6 +166,11 @@ public class GameManager : MonoBehaviour
         DrawnCard = null;
         ActivePower = CardPower.None;
         CurrentPowerStep = PowerStep.None;
+
+        _matchedThisTurn = false;
+        _awaitingGiveCard = false;
+        _opponentMatchedSlot = null;
+        ClearArmedSlot();
 
         if (CambioHasBeenCalled)
         {
@@ -152,28 +185,138 @@ public class GameManager : MonoBehaviour
         SetPhase(GamePhase.DrawingCard, !IsPlayerTurn);
     }
 
-    // -------------------------------------------------------------------------
-    // Scoring
-    // -------------------------------------------------------------------------
+    public void FinishPeeking()
+    {
+        if (CurrentPhase != GamePhase.UsingPower) return;
+        EndTurn();
+    }
+
+    public void ConfirmInformedTrade()
+    {
+        if (CurrentPhase != GamePhase.UsingPower || CurrentPowerStep != PowerStep.ConfirmingTrade)
+            return;
+
+        SwapSlots(_tradeOpponentSlot, _tradeOwnSlot);
+        _tradeOpponentSlot = null;
+        _tradeOwnSlot = null;
+        EndTurn();
+    }
+
+    public void AttemptMatch(CardSlot slot, bool byPlayer)
+    {
+        ClearArmedSlot();
+
+        if (CurrentPhase != GamePhase.DrawingCard) return;
+        if (_matchedThisTurn || _awaitingGiveCard) return;
+        if (slot == null || !slot.IsActive) return;
+        if (deck.TopDiscard == null) return;
+
+        bool success = slot.Card.displayNumber == deck.TopDiscard.displayNumber;
+
+        if (!success)
+        {
+            ApplyPenalty(byPlayer);
+            OnMatchResolved?.Invoke(slot, false, byPlayer);
+            return;
+        }
+
+        _matchedThisTurn = true;
+        bool matchersOwn = slot.BelongsToPlayer == byPlayer;
+        Card matched = slot.Card;
+        deck.Discard(matched);
+
+        if (matchersOwn)
+        {
+            slot.SetInactive();
+            OnMatchResolved?.Invoke(slot, true, byPlayer);
+        }
+        else
+        {
+            _opponentMatchedSlot = slot;
+            _awaitingGiveCard = true;
+            _giveByPlayer = byPlayer;
+            OnMatchResolved?.Invoke(slot, true, byPlayer);
+            OnAwaitingGiveCard?.Invoke(byPlayer);
+        }
+    }
+
+    public void GiveCardToOpponent(CardSlot giverSlot)
+    {
+        if (!_awaitingGiveCard || giverSlot == null) return;
+        if (giverSlot.BelongsToPlayer != _giveByPlayer || !giverSlot.IsActive) return;
+
+        Card given = giverSlot.Card;
+        giverSlot.SetInactive();
+        _opponentMatchedSlot.SetCard(given);
+
+        CardSlot receiver = _opponentMatchedSlot;
+        _awaitingGiveCard = false;
+        _opponentMatchedSlot = null;
+
+        OnSlotsSwapped?.Invoke(giverSlot, receiver);
+        OnGiveCardDone?.Invoke();
+    }
+
+    private void HandleMatchClick(CardSlot slot)
+    {
+        if (_matchedThisTurn) return;
+        if (deck.TopDiscard == null) return;
+        if (slot == null || !slot.IsActive) return;
+
+        if (_armedMatchSlot == null)
+        {
+            _armedMatchSlot = slot;
+            slot.SetArmed(true);
+        }
+        else if (_armedMatchSlot == slot)
+        {
+            AttemptMatch(slot, true);
+        }
+        else
+        {
+            ClearArmedSlot();
+        }
+    }
+
+    private void HandleGiveCardSelection(CardSlot slot, bool byPlayer)
+    {
+        if (!byPlayer || slot == null) return;
+        if (slot.BelongsToPlayer != _giveByPlayer || !slot.IsActive) return;
+        GiveCardToOpponent(slot);
+    }
+
+    private void ApplyPenalty(bool forPlayer)
+    {
+        List<Card> list = forPlayer ? _playerPenalties : _aiPenalties;
+        if (list.Count >= 4) return;
+        Card pen = deck.DrawFromDeck();
+        if (pen == null) return;
+        list.Add(pen);
+        OnPenaltyAdded?.Invoke(forPlayer, list.Count - 1);
+    }
+
+    private void ClearArmedSlot()
+    {
+        if (_armedMatchSlot == null) return;
+        _armedMatchSlot.SetArmed(false);
+        _armedMatchSlot = null;
+    }
 
     public int GetScore(bool forPlayer)
     {
         CardSlot[] slots = forPlayer ? playerSlots : aiSlots;
         int total = 0;
-        foreach (var slot in slots) total += slot.Card.Value;
+        foreach (var slot in slots)
+            if (slot.IsActive) total += slot.Card.Value;
+
+        List<Card> pens = forPlayer ? _playerPenalties : _aiPenalties;
+        foreach (var c in pens) total += c.Value;
         return total;
     }
 
-    // -------------------------------------------------------------------------
-    // Slot accessors for AI
-    // -------------------------------------------------------------------------
-
     public CardSlot[] GetPlayerSlots() => playerSlots;
     public CardSlot[] GetAISlots() => aiSlots;
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
+    public Deck Getdeck() => deck;
 
     private void DealInitialHands()
     {
@@ -188,100 +331,84 @@ public class GameManager : MonoBehaviour
 
     private void HandleSwapDrawnIntoSlot(CardSlot slot)
     {
-        // Only allow swapping into your own slots
-        if (IsPlayerTurn && !slot.BelongsToPlayer) return;
-        if (!IsPlayerTurn && slot.BelongsToPlayer) return;
-
+        if (!IsOwnSlot(slot)) return;
         Card displaced = slot.SwapCard(DrawnCard);
         deck.Discard(displaced);
-        // Swapped-in card powers do NOT trigger — only discarded cards trigger powers
         EndTurn();
     }
 
     private void BeginPower(CardPower power)
     {
-        SetPhase(GamePhase.UsingPower, IsPlayerTurn);
-
         CurrentPowerStep = power switch
         {
-            CardPower.LookOwnCard => PowerStep.LookingOwn,
+            CardPower.LookOwnCard      => PowerStep.LookingOwn,
             CardPower.LookOpponentCard => PowerStep.LookingOpponent,
-            CardPower.BlindSwap => PowerStep.SelectingPowerSwapSource,
-            CardPower.LookAndSwap => PowerStep.LookingOpponent, // look first
-            _ => PowerStep.None
+            CardPower.BlindSwap        => PowerStep.SelectingPowerSwapSource,
+            CardPower.LookAndSwap      => PowerStep.SelectingTradeOpponent,
+            _                          => PowerStep.None
         };
-    }
 
-    // Tracks the first slot selected during a two-slot power
-    private CardSlot powerSourceSlot;
+        SetPhase(GamePhase.UsingPower, IsPlayerTurn);
+    }
 
     private void HandlePowerSlotSelection(CardSlot slot)
     {
         switch (CurrentPowerStep)
         {
             case PowerStep.LookingOwn:
-                // Reveal one of your own slots
-                if (IsPlayerTurn && !slot.BelongsToPlayer) return;
-                if (!IsPlayerTurn && slot.BelongsToPlayer) return;
+                if (!IsOwnSlot(slot)) return;
                 OnSlotRevealed?.Invoke(slot);
                 break;
 
             case PowerStep.LookingOpponent:
-                // Reveal one opponent slot
-                if (IsPlayerTurn && slot.BelongsToPlayer) return;
-                if (!IsPlayerTurn && !slot.BelongsToPlayer) return;
+                if (!IsOpponentSlot(slot)) return;
                 OnSlotRevealed?.Invoke(slot);
-                // LookAndSwap gets to swap after looking
-                if (ActivePower == CardPower.LookAndSwap)
-                {
-                    powerSourceSlot = slot;
-                    CurrentPowerStep = PowerStep.SelectingPowerSwapTarget;
-                }
-
                 break;
 
             case PowerStep.SelectingPowerSwapSource:
-                powerSourceSlot = slot;
+                if (!IsOwnSlot(slot)) return;
+                _powerSourceSlot = slot;
                 CurrentPowerStep = PowerStep.SelectingPowerSwapTarget;
+                SetPhase(GamePhase.UsingPower, IsPlayerTurn);
                 break;
 
             case PowerStep.SelectingPowerSwapTarget:
-                // Swap the two selected slots
-                Card temp = powerSourceSlot.SwapCard(slot.Card);
-                slot.SwapCard(temp);
-                OnSlotsSwapped?.Invoke(powerSourceSlot, slot);
-                powerSourceSlot = null;
+                if (!IsOpponentSlot(slot)) return;
+                SwapSlots(_powerSourceSlot, slot);
+                _powerSourceSlot = null;
                 EndTurn();
+                break;
+
+            case PowerStep.SelectingTradeOpponent:
+                if (!IsOpponentSlot(slot)) return;
+                _tradeOpponentSlot = slot;
+                CurrentPowerStep = PowerStep.SelectingTradeOwn;
+                SetPhase(GamePhase.UsingPower, IsPlayerTurn);
+                break;
+
+            case PowerStep.SelectingTradeOwn:
+                if (!IsOwnSlot(slot)) return;
+                _tradeOwnSlot = slot;
+                CurrentPowerStep = PowerStep.ConfirmingTrade;
+                OnInformedTradeReady?.Invoke(_tradeOpponentSlot, _tradeOwnSlot);
+                SetPhase(GamePhase.UsingPower, IsPlayerTurn);
                 break;
         }
     }
-    
-    public void FinishPeeking()
-    {
-        if (CurrentPhase != GamePhase.UsingPower) return;
 
-        if (ActivePower == CardPower.LookAndSwap)
-        {
-            CurrentPowerStep = PowerStep.SelectingPowerSwapTarget;
-        }
-        else
-        {
-            EndTurn();
-        }
+    private void SwapSlots(CardSlot a, CardSlot b)
+    {
+        Card temp = a.SwapCard(b.Card);
+        b.SwapCard(temp);
+        OnSlotsSwapped?.Invoke(a, b);
     }
 
-    public Deck Getdeck()
-    {
-        return deck;
-    }
+    private bool IsOwnSlot(CardSlot slot) => slot.BelongsToPlayer == IsPlayerTurn;
+    private bool IsOpponentSlot(CardSlot slot) => slot.BelongsToPlayer != IsPlayerTurn;
 
     private void Update()
     {
-        print(CurrentPhase);
-
         if (Keyboard.current.rKey.isPressed)
-        {
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        }
     }
 }

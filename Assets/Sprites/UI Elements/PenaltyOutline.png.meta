@@ -1,0 +1,923 @@
+fileFormatVersion: 2
+guid: 0b3bf7fed49ca4dca98b518099b85a46
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -2067646781654651024
+    second: PenaltyOutline_0
+  - first:
+      213: 6043642298933171984
+    second: PenaltyOutline_1
+  - first:
+      213: -4759470607568012936
+    second: PenaltyOutline_2
+  - first:
+      213: -5546054001137322546
+    second: PenaltyOutline_3
+  - first:
+      213: -1929023701060072298
+    second: PenaltyOutline_4
+  - first:
+      213: 970544463682719987
+    second: PenaltyOutline_5
+  - first:
+      213: -1450533414697842969
+    second: PenaltyOutline_6
+  - first:
+      213: 697251276237608708
+    second: PenaltyOutline_7
+  - first:
+      213: -2045266975328837575
+    second: PenaltyOutline_8
+  - first:
+      213: -1443195889408958951
+    second: PenaltyOutline_9
+  - first:
+      213: 6607084520638188743
+    second: PenaltyOutline_10
+  - first:
+      213: -4089529804630397732
+    second: PenaltyOutline_11
+  - first:
+      213: 1363475721369587391
+    second: PenaltyOutline_12
+  - first:
+      213: 2616477289096321203
+    second: PenaltyOutline_13
+  - first:
+      213: -4445785085745455932
+    second: PenaltyOutline_14
+  - first:
+      213: 3910783780973518306
+    second: PenaltyOutline_15
+  - first:
+      213: -1763812488491836999
+    second: PenaltyOutline_16
+  - first:
+      213: 3220750458077280652
+    second: PenaltyOutline_17
+  - first:
+      213: -8708597123063962594
+    second: PenaltyOutline_18
+  - first:
+      213: -7790942570027599634
+    second: PenaltyOutline_19
+  - first:
+      213: -45160174682506910
+    second: PenaltyOutline_20
+  - first:
+      213: 6601433031968503156
+    second: PenaltyOutline_21
+  - first:
+      213: 1324053239819146321
+    second: PenaltyOutline_22
+  - first:
+      213: 1217302434731911161
+    second: PenaltyOutline_23
+  - first:
+      213: -8281334623479987061
+    second: PenaltyOutline_24
+  - first:
+      213: 6416625797742692093
+    second: PenaltyOutline_25
+  - first:
+      213: -7249403294651125293
+    second: PenaltyOutline_26
+  - first:
+      213: 2857897856927140702
+    second: PenaltyOutline_27
+  - first:
+      213: 6400849223711728711
+    second: PenaltyOutline_28
+  - first:
+      213: 8792556551746184043
+    second: PenaltyOutline_29
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: PenaltyOutline_0
+      rect:
+        serializedVersion: 2
+        x: 401
+        y: 2400
+        width: 311
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 07fae7af43e3e43e0800000000000000
+      internalID: -2067646781654651024
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_1
+      rect:
+        serializedVersion: 2
+        x: 889
+        y: 2410
+        width: 344
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 017df6976a45fd350800000000000000
+      internalID: 6043642298933171984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_2
+      rect:
+        serializedVersion: 2
+        x: 1410
+        y: 2410
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 879fefcf2b6f2fdb0800000000000000
+      internalID: -4759470607568012936
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_3
+      rect:
+        serializedVersion: 2
+        x: 1931
+        y: 2410
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec5731d25457803b0800000000000000
+      internalID: -5546054001137322546
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_4
+      rect:
+        serializedVersion: 2
+        x: 2452
+        y: 2410
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 69c410f0a2bba35e0800000000000000
+      internalID: -1929023701060072298
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_5
+      rect:
+        serializedVersion: 2
+        x: 2973
+        y: 2410
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3f0d78c2c01187d00800000000000000
+      internalID: 970544463682719987
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_6
+      rect:
+        serializedVersion: 2
+        x: 3494
+        y: 2410
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7e6c91a6b8baedbe0800000000000000
+      internalID: -1450533414697842969
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_7
+      rect:
+        serializedVersion: 2
+        x: 4014
+        y: 2410
+        width: 344
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 407945f67522da900800000000000000
+      internalID: 697251276237608708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_8
+      rect:
+        serializedVersion: 2
+        x: 4535
+        y: 2400
+        width: 311
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 930efa0b580cd93e0800000000000000
+      internalID: -2045266975328837575
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_9
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 2187
+        width: 221
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 91e99762cfcb8fbe0800000000000000
+      internalID: -1443195889408958951
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_10
+      rect:
+        serializedVersion: 2
+        x: 4943
+        y: 2187
+        width: 221
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7cc0f9d9d5411bb50800000000000000
+      internalID: 6607084520638188743
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_11
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 1792
+        width: 91
+        height: 298
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cdce1a85f421f37c0800000000000000
+      internalID: -4089529804630397732
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_12
+      rect:
+        serializedVersion: 2
+        x: 5156
+        y: 1792
+        width: 91
+        height: 298
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fbe8a10d1f90ce210800000000000000
+      internalID: 1363475721369587391
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_13
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 1322
+        width: 81
+        height: 318
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3b896735b389f4420800000000000000
+      internalID: 2616477289096321203
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_14
+      rect:
+        serializedVersion: 2
+        x: 5166
+        y: 1322
+        width: 81
+        height: 318
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4cc9960f4066d42c0800000000000000
+      internalID: -4445785085745455932
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_15
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 851
+        width: 81
+        height: 318
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2ed194ae025e54630800000000000000
+      internalID: 3910783780973518306
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_16
+      rect:
+        serializedVersion: 2
+        x: 5166
+        y: 851
+        width: 81
+        height: 318
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9b9db0503eda587e0800000000000000
+      internalID: -1763812488491836999
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_17
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 401
+        width: 91
+        height: 298
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c897fd33a7762bc20800000000000000
+      internalID: 3220750458077280652
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_18
+      rect:
+        serializedVersion: 2
+        x: 5156
+        y: 401
+        width: 91
+        height: 298
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e14a8c38e09d42780800000000000000
+      internalID: -8708597123063962594
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_19
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 83
+        width: 221
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ee83900c20301e390800000000000000
+      internalID: -7790942570027599634
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_20
+      rect:
+        serializedVersion: 2
+        x: 401
+        y: 0
+        width: 311
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 269fd067f0f8f5ff0800000000000000
+      internalID: -45160174682506910
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_21
+      rect:
+        serializedVersion: 2
+        x: 4535
+        y: 0
+        width: 311
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 475330fdd500d9b50800000000000000
+      internalID: 6601433031968503156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_22
+      rect:
+        serializedVersion: 2
+        x: 4943
+        y: 83
+        width: 221
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 154102f086bff5210800000000000000
+      internalID: 1324053239819146321
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_23
+      rect:
+        serializedVersion: 2
+        x: 889
+        y: 0
+        width: 344
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9f7e9666d1ab4e010800000000000000
+      internalID: 1217302434731911161
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_24
+      rect:
+        serializedVersion: 2
+        x: 1410
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b84055d490ac21d80800000000000000
+      internalID: -8281334623479987061
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_25
+      rect:
+        serializedVersion: 2
+        x: 1931
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df68f039a2f6c0950800000000000000
+      internalID: 6416625797742692093
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_26
+      rect:
+        serializedVersion: 2
+        x: 2452
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d1f5cccc12f46b90800000000000000
+      internalID: -7249403294651125293
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_27
+      rect:
+        serializedVersion: 2
+        x: 2973
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e5b0e7685fa49a720800000000000000
+      internalID: 2857897856927140702
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_28
+      rect:
+        serializedVersion: 2
+        x: 3494
+        y: 0
+        width: 343
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7442c20b47264d850800000000000000
+      internalID: 6400849223711728711
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PenaltyOutline_29
+      rect:
+        serializedVersion: 2
+        x: 4014
+        y: 0
+        width: 344
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b636d5e499f650a70800000000000000
+      internalID: 8792556551746184043
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      PenaltyOutline_0: -2067646781654651024
+      PenaltyOutline_1: 6043642298933171984
+      PenaltyOutline_10: 6607084520638188743
+      PenaltyOutline_11: -4089529804630397732
+      PenaltyOutline_12: 1363475721369587391
+      PenaltyOutline_13: 2616477289096321203
+      PenaltyOutline_14: -4445785085745455932
+      PenaltyOutline_15: 3910783780973518306
+      PenaltyOutline_16: -1763812488491836999
+      PenaltyOutline_17: 3220750458077280652
+      PenaltyOutline_18: -8708597123063962594
+      PenaltyOutline_19: -7790942570027599634
+      PenaltyOutline_2: -4759470607568012936
+      PenaltyOutline_20: -45160174682506910
+      PenaltyOutline_21: 6601433031968503156
+      PenaltyOutline_22: 1324053239819146321
+      PenaltyOutline_23: 1217302434731911161
+      PenaltyOutline_24: -8281334623479987061
+      PenaltyOutline_25: 6416625797742692093
+      PenaltyOutline_26: -7249403294651125293
+      PenaltyOutline_27: 2857897856927140702
+      PenaltyOutline_28: 6400849223711728711
+      PenaltyOutline_29: 8792556551746184043
+      PenaltyOutline_3: -5546054001137322546
+      PenaltyOutline_4: -1929023701060072298
+      PenaltyOutline_5: 970544463682719987
+      PenaltyOutline_6: -1450533414697842969
+      PenaltyOutline_7: 697251276237608708
+      PenaltyOutline_8: -2045266975328837575
+      PenaltyOutline_9: -1443195889408958951
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

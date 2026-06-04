@@ -6,7 +6,7 @@ public enum CardPower { None, LookOwnCard, LookOpponentCard, BlindSwap, LookAndS
 public class Card
 {
     public Sprite sprite;
-    public int displayNumber;  // 1–13, 0 = Joker
+    public int displayNumber;
     public bool isRed;
 
     public int Value => displayNumber switch
