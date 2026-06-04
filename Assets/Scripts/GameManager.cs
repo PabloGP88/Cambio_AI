@@ -208,13 +208,14 @@ public class GameManager : MonoBehaviour
 
         if (CurrentPhase != GamePhase.DrawingCard) return;
         if (_matchedThisTurn || _awaitingGiveCard) return;
-        if (slot == null || !slot.IsActive) return;
+        if (slot == null || !slot.IsActive || slot.Card == null) return;
         if (deck.TopDiscard == null) return;
 
         bool success = slot.Card.displayNumber == deck.TopDiscard.displayNumber;
 
         if (!success)
         {
+            // Failed: card stays exactly where it is, attempter just takes a penalty.
             ApplyPenalty(byPlayer);
             OnMatchResolved?.Invoke(slot, false, byPlayer);
             return;
@@ -222,16 +223,18 @@ public class GameManager : MonoBehaviour
 
         _matchedThisTurn = true;
         bool matchersOwn = slot.BelongsToPlayer == byPlayer;
-        Card matched = slot.Card;
-        deck.Discard(matched);
+        deck.Discard(slot.Card);
 
         if (matchersOwn)
         {
+            // Matched your own card -> it leaves play, you have one fewer card.
             slot.SetInactive();
             OnMatchResolved?.Invoke(slot, true, byPlayer);
         }
         else
         {
+            // Matched opponent's card -> theirs leaves play, you must hand one of
+            // yours into the now-empty slot.
             _opponentMatchedSlot = slot;
             _awaitingGiveCard = true;
             _giveByPlayer = byPlayer;
@@ -261,7 +264,7 @@ public class GameManager : MonoBehaviour
     {
         if (_matchedThisTurn) return;
         if (deck.TopDiscard == null) return;
-        if (slot == null || !slot.IsActive) return;
+        if (slot == null || !slot.IsActive || slot.Card == null) return; 
 
         if (_armedMatchSlot == null)
         {
@@ -353,6 +356,8 @@ public class GameManager : MonoBehaviour
 
     private void HandlePowerSlotSelection(CardSlot slot)
     {
+        if (slot == null || !slot.IsActive || slot.Card == null) return;
+        
         switch (CurrentPowerStep)
         {
             case PowerStep.LookingOwn:

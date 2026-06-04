@@ -38,6 +38,11 @@ public class CardSlot : MonoBehaviour
         gameObject.SetActive(false);
     }
 
+    public void Reactivate()
+    {
+        IsActive = true;
+        gameObject.SetActive(true);
+    }
     public void SetArmed(bool on)
     {
         if (highlight == null) return;

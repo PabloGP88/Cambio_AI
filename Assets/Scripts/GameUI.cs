@@ -49,7 +49,9 @@ public class GameUI : MonoBehaviour
     [SerializeField] private Image[] penaltyCardsPlayer;
     [SerializeField] private GameObject[] penaltyOutlinesAI;
     [SerializeField] private Image[] penaltyCardsAI;
-
+    [SerializeField] private GameObject[] penaltyArrowsPlayer;
+    [SerializeField] private GameObject[] penaltyArrowsAI;
+    
     [Header("Game Over UI")]
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TextMeshProUGUI gameOverText;
@@ -302,8 +304,10 @@ public class GameUI : MonoBehaviour
 
         foreach (var arrow in slotArrowsAI)
             arrow.SetActive(showAI);
-    }
 
+        ShowPenaltyArrows(penaltyArrowsPlayer, penaltyCardsPlayer, showPlayer);
+        ShowPenaltyArrows(penaltyArrowsAI, penaltyCardsAI, showAI);
+    }
     private void HideAllArrows()
     {
         playerSlotArrowsUI.SetActive(false);
@@ -314,6 +318,30 @@ public class GameUI : MonoBehaviour
 
         foreach (var arrow in slotArrowsAI)
             arrow.SetActive(false);
+
+        HidePenaltyArrows(penaltyArrowsPlayer);
+        HidePenaltyArrows(penaltyArrowsAI);
+    }
+
+    private void ShowPenaltyArrows(GameObject[] arrows, Image[] cards, bool show)
+    {
+        if (arrows == null) return;
+        for (int i = 0; i < arrows.Length; i++)
+        {
+            if (arrows[i] == null) continue;
+            bool cardExists = show
+                              && cards != null
+                              && i < cards.Length
+                              && cards[i] != null
+                              && cards[i].gameObject.activeSelf;
+            arrows[i].SetActive(cardExists);
+        }
+    }
+    private void HidePenaltyArrows(GameObject[] arrows)
+    {
+        if (arrows == null) return;
+        foreach (var arrow in arrows)
+            if (arrow != null) arrow.SetActive(false);
     }
 
     private void ResetPenaltyUI()
