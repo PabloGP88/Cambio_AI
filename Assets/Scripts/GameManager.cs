@@ -70,8 +70,8 @@ public class GameManager : MonoBehaviour
     private bool _giveByPlayer;
     private CardSlot _opponentMatchedSlot;
 
-    private readonly List<Card> _playerPenalties = new();
-    private readonly List<Card> _aiPenalties = new();
+    [SerializeField] private CardSlot[] playerPenaltySlots;
+    [SerializeField] private CardSlot[] aiPenaltySlots;
 
     void Awake()
     {
@@ -290,12 +290,21 @@ public class GameManager : MonoBehaviour
 
     private void ApplyPenalty(bool forPlayer)
     {
-        List<Card> list = forPlayer ? _playerPenalties : _aiPenalties;
-        if (list.Count >= 4) return;
+        CardSlot[] slots = forPlayer ? playerPenaltySlots : aiPenaltySlots;
+
+        int index = -1;
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (!slots[i].IsActive) { index = i; break; }
+        }
+        if (index < 0) return;            
+
         Card pen = deck.DrawFromDeck();
         if (pen == null) return;
-        list.Add(pen);
-        OnPenaltyAdded?.Invoke(forPlayer, list.Count - 1);
+
+        slots[index].Assign(pen, index, forPlayer);
+        slots[index].Reactivate();
+        OnPenaltyAdded?.Invoke(forPlayer, index);
     }
 
     private void ClearArmedSlot()
@@ -312,8 +321,10 @@ public class GameManager : MonoBehaviour
         foreach (var slot in slots)
             if (slot.IsActive) total += slot.Card.Value;
 
-        List<Card> pens = forPlayer ? _playerPenalties : _aiPenalties;
-        foreach (var c in pens) total += c.Value;
+        CardSlot[] pens = forPlayer ? playerPenaltySlots : aiPenaltySlots;
+        foreach (var slot in pens)
+            if (slot.IsActive && slot.Card != null) total += slot.Card.Value;
+
         return total;
     }
 
@@ -328,6 +339,10 @@ public class GameManager : MonoBehaviour
 
         for (int i = 0; i < aiSlots.Length; i++)
             aiSlots[i].Assign(deck.DrawFromDeck(), i, false);
+        
+        // Penalties 
+        foreach (var s in playerPenaltySlots) s.SetInactive();
+        foreach (var s in aiPenaltySlots)     s.SetInactive();
 
         SetPhase(GamePhase.Dealing, true);
     }
