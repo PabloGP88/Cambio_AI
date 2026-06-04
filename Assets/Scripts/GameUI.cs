@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class GameUI : MonoBehaviour
@@ -368,8 +369,13 @@ public class GameUI : MonoBehaviour
     {
         int playerScore = _gm.GetScore(true);
         int aiScore = _gm.GetScore(false);
-        string result = playerScore < aiScore ? "You win!" : playerScore > aiScore ? "Wallace wins!" : "Draw!";
-        gameOverText.text = $"{result}\nYou: {playerScore}  |  Wallace: {aiScore}";
+        string result = playerScore < aiScore ? "You win!" : playerScore > aiScore ? "Ben wins!" : "Draw!";
+        gameOverText.text = $"{result}\nYou: {playerScore}  |  Ben: {aiScore}";
         gameOverPanel.SetActive(true);
+    }
+
+    public void RestartGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

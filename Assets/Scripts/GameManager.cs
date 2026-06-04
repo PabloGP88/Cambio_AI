@@ -154,6 +154,8 @@ public class GameManager : MonoBehaviour
     {
         if (CurrentPhase != GamePhase.DrawingCard) return;
         if (_awaitingGiveCard) return;
+        if (CambioHasBeenCalled) return;  
+
         CambioHasBeenCalled = true;
         IsPlayerCambioCaller = IsPlayerTurn;
         FinalRoundTurnsLeft = 1;
@@ -172,7 +174,7 @@ public class GameManager : MonoBehaviour
         _opponentMatchedSlot = null;
         ClearArmedSlot();
 
-        if (CambioHasBeenCalled)
+        if (CambioHasBeenCalled && IsPlayerTurn != IsPlayerCambioCaller)
         {
             FinalRoundTurnsLeft--;
             if (FinalRoundTurnsLeft <= 0)
@@ -181,7 +183,7 @@ public class GameManager : MonoBehaviour
                 return;
             }
         }
-
+        
         SetPhase(GamePhase.DrawingCard, !IsPlayerTurn);
     }
 
@@ -425,10 +427,5 @@ public class GameManager : MonoBehaviour
 
     private bool IsOwnSlot(CardSlot slot) => slot.BelongsToPlayer == IsPlayerTurn;
     private bool IsOpponentSlot(CardSlot slot) => slot.BelongsToPlayer != IsPlayerTurn;
-
-    private void Update()
-    {
-        if (Keyboard.current.rKey.isPressed)
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
+    
 }
