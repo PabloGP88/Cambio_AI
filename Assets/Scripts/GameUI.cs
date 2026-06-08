@@ -4,6 +4,17 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+/// <summary>
+/// Presentation layer, wired to the new pure-C# game core.
+///
+/// The SERIALIZED FIELDS and the public On*Pressed() methods below are kept IDENTICAL to
+/// the original GameUI so your existing scene/Inspector wiring (panels, arrows, penalty
+/// slots, button OnClick events) carries over with no re-wiring. Only the *internals*
+/// were ported to the new API:
+///   - card sprites come from the Deck catalog via deck.SpriteFor(card)
+///   - events now carry Card structs / int side+index instead of CardSlot objects
+///   - actions route through GameManager.Player.PressX()
+/// </summary>
 public class GameUI : MonoBehaviour
 {
     [Header("Turn UI")]
@@ -52,7 +63,7 @@ public class GameUI : MonoBehaviour
     [SerializeField] private Image[] penaltyCardsAI;
     [SerializeField] private GameObject[] penaltyArrowsPlayer;
     [SerializeField] private GameObject[] penaltyArrowsAI;
-    
+
     [Header("Game Over UI")]
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TextMeshProUGUI gameOverText;
@@ -64,7 +75,7 @@ public class GameUI : MonoBehaviour
     void Start()
     {
         _gm = GameManager.Instance;
-        _deck = _gm.Getdeck();
+        _deck = _gm.Catalog;                 // was _gm.Getdeck()
 
         _gm.OnPhaseChanged += HandlePhaseChanged;
         _gm.OnCardDrawn += HandleCardDrawn;
@@ -78,7 +89,10 @@ public class GameUI : MonoBehaviour
 
         ResetPenaltyUI();
         SetImageAlpha(matchSlotImage, 0f);
-        ShowInitialPeek();
+
+        // If GameManager.Start already ran, State exists and we can show the peek now.
+        // If it hasn't, we'll catch the Dealing OnPhaseChanged event below instead.
+        if (_gm.State != null) ShowInitialPeek();
     }
 
     void OnDestroy()
@@ -95,31 +109,40 @@ public class GameUI : MonoBehaviour
         _gm.OnPenaltyAdded -= HandlePenaltyAdded;
     }
 
+    // ----------------------------------------------------------------------
+    // Button hooks (wire these to your Button OnClick events in the Inspector,
+    // exactly as before — names and signatures are unchanged).
+    // ----------------------------------------------------------------------
+
     public void OnStartGamePressed()
     {
         initialCardsView.SetActive(false);
         turnUI.SetActive(true);
-        _gm.SetPhase(GamePhase.DrawingCard, true);
+        _gm.StartPlay();                                  // was _gm.SetPhase(GamePhase.DrawingCard, true)
     }
 
-    public void OnDrawFromDeckPressed() => _gm.DrawFromDeck();
-    public void OnDrawFromDiscardPressed() => _gm.DrawFromDiscard();
-    public void OnDiscardDrawnPressed() => _gm.DiscardDrawnCard();
-    public void OnSwapDrawnPressed() => _gm.BeginSwapDrawnCard();
-    public void OnCambioPressed() => _gm.CallCambio();
+    public void OnDrawFromDeckPressed()    => _gm.Player.PressDrawDeck();
+    public void OnDrawFromDiscardPressed() => _gm.Player.PressDrawDiscard();
+    public void OnDiscardDrawnPressed()    => _gm.Player.PressDiscardDrawn();
+    public void OnSwapDrawnPressed()       => _gm.Player.PressBeginSwap();
+    public void OnCambioPressed()          => _gm.Player.PressCambio();
 
     public void OnHidePeekedCardPressed()
     {
         slotRevealedUI.SetActive(false);
         HideAllArrows();
-        _gm.FinishPeeking();
+        _gm.Player.PressFinishPeek();                     // was _gm.FinishPeeking()
     }
 
     public void OnInformedTradeConfirmPressed()
     {
         informedTradeView.SetActive(false);
-        _gm.ConfirmInformedTrade();
+        _gm.Player.PressConfirmTrade();                   // was _gm.ConfirmInformedTrade()
     }
+
+    // ----------------------------------------------------------------------
+    // Event handlers (signatures updated to the new core's events)
+    // ----------------------------------------------------------------------
 
     private void HandlePhaseChanged(GamePhase phase, bool isPlayerTurn)
     {
@@ -143,7 +166,8 @@ public class GameUI : MonoBehaviour
                 break;
 
             case GamePhase.CardDrawn:
-                drawnCardView.SetActive(true);
+                // Only show the drawn card on the human's turn — never leak the AI's draw.
+                if (isPlayerTurn) drawnCardView.SetActive(true);
                 break;
 
             case GamePhase.SelectingSwapSlot:
@@ -164,36 +188,38 @@ public class GameUI : MonoBehaviour
 
     private void HandleCardDrawn(Card card)
     {
-        drawnCardImage.sprite = card.sprite;
+        if (!_gm.IsPlayerTurn) return;                    // guard: hide AI's drawn card
+        drawnCardImage.sprite = _deck.SpriteFor(card);    // was card.sprite
         RefreshDiscardDisplay();
     }
 
-    private void HandleSlotRevealed(CardSlot slot)
+    private void HandleSlotRevealed(int side, int index, Card card)
     {
         if (!_gm.IsPlayerTurn) return;
-        slotRevealedImage.sprite = slot.Card.sprite;
+        slotRevealedImage.sprite = _deck.SpriteFor(card); // was slot.Card.sprite
         slotRevealedUI.SetActive(true);
         HideAllArrows();
     }
 
-    private void HandleSlotsSwapped(CardSlot a, CardSlot b)
+    private void HandleSlotsSwapped()
     {
-        
+        // No visual needed — slot visibility is reconciled by GameManager.SyncViews().
     }
 
-    private void HandleInformedTradeReady(CardSlot opponentSlot, CardSlot ownSlot)
+    private void HandleInformedTradeReady(Card opponentCard, Card ownCard)
     {
         if (!_gm.IsPlayerTurn) return;
-        informedTradeOpponentCard.sprite = opponentSlot.Card.sprite;
-        informedTradePlayerCard.sprite = ownSlot.Card.sprite;
+        informedTradeOpponentCard.sprite = _deck.SpriteFor(opponentCard);
+        informedTradePlayerCard.sprite = _deck.SpriteFor(ownCard);
         informedTradeView.SetActive(true);
         HideAllArrows();
     }
 
-    private void HandleMatchResolved(CardSlot slot, bool success, bool byPlayer)
+    private void HandleMatchResolved(int side, int index, Card card, bool success, bool byPlayer)
     {
+        // The matched card going to discard is public info — safe to flash for both sides.
         if (_matchFlash != null) StopCoroutine(_matchFlash);
-        _matchFlash = StartCoroutine(FlashMatch(slot.Card.sprite));
+        _matchFlash = StartCoroutine(FlashMatch(_deck.SpriteFor(card)));
         if (success) RefreshDiscardDisplay();
     }
 
@@ -220,10 +246,14 @@ public class GameUI : MonoBehaviour
 
         if (cards[index] != null)
         {
-            cards[index].sprite = _deck.CardBack;
+            cards[index].sprite = _deck.CardBack;          // penalty cards stay face-down
             cards[index].gameObject.SetActive(true);
         }
     }
+
+    // ----------------------------------------------------------------------
+    // Helpers (unchanged from the original, except for the new data sources)
+    // ----------------------------------------------------------------------
 
     private IEnumerator FlashMatch(Sprite sprite)
     {
@@ -237,10 +267,10 @@ public class GameUI : MonoBehaviour
 
     private void ShowInitialPeek()
     {
-        CardSlot[] playerSlots = _gm.GetPlayerSlots();
-        if (playerSlots.Length < 2) return;
-        peekCardLeft.sprite = playerSlots[0].Card.sprite;
-        peekCardRight.sprite = playerSlots[1].Card.sprite;
+        if (_gm == null || _gm.State == null) return;
+        var (a, b) = _gm.PeekInitialIds();                 // was _gm.GetPlayerSlots()[0/1].Card
+        peekCardLeft.sprite = _deck.SpriteFor(a);
+        peekCardRight.sprite = _deck.SpriteFor(b);
         initialCardsView.SetActive(true);
         turnUI.SetActive(false);
     }
@@ -253,14 +283,13 @@ public class GameUI : MonoBehaviour
 
     private void RefreshDiscardDisplay()
     {
-        discardTopImage.sprite = _deck.TopDiscard != null
-            ? _deck.TopDiscard.sprite
-            : emptyDiscardSprite;
+        Card top = _gm.State.TopDiscard;                   // discard now lives in GameState
+        discardTopImage.sprite = top.IsNone ? emptyDiscardSprite : _deck.SpriteFor(top);
     }
 
     private void ShowPowerPrompt()
     {
-        switch (_gm.CurrentPowerStep)
+        switch (_gm.State.PowerStep)                        // was _gm.CurrentPowerStep
         {
             case PowerStep.LookingOwn:
                 ShowArrows(playerOnly: true, opponentOnly: false);
@@ -309,6 +338,7 @@ public class GameUI : MonoBehaviour
         ShowPenaltyArrows(penaltyArrowsPlayer, penaltyCardsPlayer, showPlayer);
         ShowPenaltyArrows(penaltyArrowsAI, penaltyCardsAI, showAI);
     }
+
     private void HideAllArrows()
     {
         playerSlotArrowsUI.SetActive(false);
@@ -338,6 +368,7 @@ public class GameUI : MonoBehaviour
             arrows[i].SetActive(cardExists);
         }
     }
+
     private void HidePenaltyArrows(GameObject[] arrows)
     {
         if (arrows == null) return;

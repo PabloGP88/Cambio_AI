@@ -1,431 +1,253 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 
-public enum GamePhase
-{
-    Dealing,
-    DrawingCard,
-    CardDrawn,
-    SelectingSwapSlot,
-    DiscardingDrawn,
-    UsingPower,
-    CambioCalled,
-    GameOver
-}
-
-public enum PowerStep
-{
-    None,
-    LookingOwn,
-    LookingOpponent,
-    SelectingPowerSwapSource,
-    SelectingPowerSwapTarget,
-    SelectingTradeOpponent,
-    SelectingTradeOwn,
-    ConfirmingTrade
-}
-
+/// <summary>
+/// The bridge between the pure game core and Unity. It:
+///   * owns the ONE authoritative GameState,
+///   * exposes a single Submit path (SubmitPlayer / SubmitAI both funnel to Apply),
+///   * fires C# events the view subscribes to (transient UI: reveals, draws, flashes...),
+///   * reconciles slot visibility from state after every move (SyncViews), and
+///   * drives the turn loop: after each move, if it's the AI's decision, ask the agent.
+///
+/// It deliberately holds NO rules. Rules live in GameState; player->command translation
+/// lives in PlayerInput; AI->command lives in AICambioAgent.
+/// </summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [Header("Card References")]
+    [Header("Layout")]
+    [SerializeField] private int handSize = 4;
     [SerializeField] private Deck deck;
+
+    [Header("Slot views (must match handSize / penalty counts)")]
     [SerializeField] private CardSlot[] playerSlots;
     [SerializeField] private CardSlot[] aiSlots;
-
-    public GamePhase CurrentPhase { get; private set; }
-    public bool IsPlayerTurn { get; private set; }
-    public Card DrawnCard { get; private set; }
-    public CardPower ActivePower { get; private set; }
-    public PowerStep CurrentPowerStep { get; private set; }
-
-    public bool CambioHasBeenCalled { get; private set; }
-    public bool IsPlayerCambioCaller { get; private set; }
-    public int FinalRoundTurnsLeft { get; private set; }
-
-    public bool MatchedThisTurn => _matchedThisTurn;
-    public bool AwaitingGiveCard => _awaitingGiveCard;
-
-    public event Action<GamePhase, bool> OnPhaseChanged;
-    public event Action<Card> OnCardDrawn;
-    public event Action<CardSlot> OnSlotRevealed;
-    public event Action<CardSlot, CardSlot> OnSlotsSwapped;
-    public event Action<CardSlot, CardSlot> OnInformedTradeReady;
-    public event Action<CardSlot, bool, bool> OnMatchResolved;
-    public event Action<bool> OnAwaitingGiveCard;
-    public event Action OnGiveCardDone;
-    public event Action<bool, int> OnPenaltyAdded;
-
-    private CardSlot _powerSourceSlot;
-    private CardSlot _tradeOpponentSlot;
-    private CardSlot _tradeOwnSlot;
-
-    private bool _matchedThisTurn;
-    private CardSlot _armedMatchSlot;
-    private bool _awaitingGiveCard;
-    private bool _giveByPlayer;
-    private CardSlot _opponentMatchedSlot;
-
     [SerializeField] private CardSlot[] playerPenaltySlots;
     [SerializeField] private CardSlot[] aiPenaltySlots;
 
-    void Awake()
+    [Header("AI")]
+    [SerializeField] private float aiThinkSeconds = 0.6f;
+
+    public GameState State { get; private set; }
+    public PlayerInput Player { get; private set; }
+    public Deck Catalog => deck;
+    public bool IsPlayerTurn => State != null && State.IsPlayerTurn;
+
+    private IAgent _ai;
+
+    // --- View events (the only thing GameUI needs to know about) ---
+    public event Action<GamePhase, bool> OnPhaseChanged;          // phase, isPlayerTurn
+    public event Action<Card> OnCardDrawn;                        // active side's drawn card
+    public event Action<int, int, Card> OnSlotRevealed;          // side, index(+zone via lookup), card
+    public event Action<int, int, Card, bool, bool> OnMatchResolved; // side, index, card, success, byPlayer
+    public event Action<bool> OnAwaitingGiveCard;                 // byPlayer
+    public event Action OnGiveCardDone;
+    public event Action<Card, Card> OnInformedTradeReady;         // opponent card, own card
+    public event Action<bool, int> OnPenaltyAdded;                // forPlayer, index
+    public event Action OnSlotsSwapped;
+    public event Action<int> OnGameOver;                          // winnerSide (-1 draw)
+
+    private void Awake()
     {
         Instance = this;
+        Player = new PlayerInput(this);
     }
 
-    void Start()
+    private void Start()
     {
-        DealInitialHands();
+        int penaltyCount = playerPenaltySlots != null ? playerPenaltySlots.Length : 0;
+        int seed = Environment.TickCount;
+
+        State = new GameState(deck.BuildShuffledDeck(), handSize, penaltyCount, seed);
+
+        InitSlotViews(playerSlots, GameState.PlayerSide, Zone.Hand);
+        InitSlotViews(aiSlots, GameState.AISide, Zone.Hand);
+        InitSlotViews(playerPenaltySlots, GameState.PlayerSide, Zone.Penalty);
+        InitSlotViews(aiPenaltySlots, GameState.AISide, Zone.Penalty);
+
+        _ai = new AICambioAgent(seed);
+        _ai.OnNewGame(GameState.AISide, State);
+
+        SyncViews();
+        OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn); // -> GameUI shows opening peek
     }
 
-    public void SetPhase(GamePhase phase, bool playerTurn)
+    private void InitSlotViews(CardSlot[] slots, int side, Zone zone)
     {
-        if (phase != GamePhase.DrawingCard) ClearArmedSlot();
-        IsPlayerTurn = playerTurn;
-        CurrentPhase = phase;
-        OnPhaseChanged?.Invoke(phase, playerTurn);
+        if (slots == null) return;
+        for (int i = 0; i < slots.Length; i++)
+            if (slots[i] != null) slots[i].Init(side, zone, i);
     }
 
-    public void DrawFromDeck()
+    // ----------------------------------------------------------------------
+    // Submit
+    // ----------------------------------------------------------------------
+
+    public void SubmitPlayer(GameCommand cmd)
     {
-        if (CurrentPhase != GamePhase.DrawingCard) return;
-        if (_awaitingGiveCard) return;
-        DrawnCard = deck.DrawFromDeck();
-        SetPhase(GamePhase.CardDrawn, IsPlayerTurn);
-        OnCardDrawn?.Invoke(DrawnCard);
+        if (!IsPlayerTurn) return;
+        Submit(cmd);
     }
 
-    public void DrawFromDiscard()
+    public void SubmitAI(GameCommand cmd)
     {
-        if (CurrentPhase != GamePhase.DrawingCard) return;
-        if (_awaitingGiveCard) return;
-        DrawnCard = deck.DrawFromDiscard();
-        if (DrawnCard == null) return;
-        SetPhase(GamePhase.CardDrawn, IsPlayerTurn);
-        OnCardDrawn?.Invoke(DrawnCard);
+        if (IsPlayerTurn) return;
+        Submit(cmd);
     }
 
-    public void DiscardDrawnCard()
+    private void Submit(GameCommand cmd)
     {
-        if (CurrentPhase != GamePhase.CardDrawn) return;
-        deck.Discard(DrawnCard);
-        ActivePower = DrawnCard.Power;
-        SetPhase(GamePhase.DiscardingDrawn, IsPlayerTurn);
+        if (State == null || State.IsTerminal) return;
 
-        if (ActivePower != CardPower.None)
-            BeginPower(ActivePower);
-        else
-            EndTurn();
-    }
+        var prevPhase = State.Phase;
+        var prevTurn = State.IsPlayerTurn;
+        var prevStep = State.PowerStep;
+        bool prevAwaitGive = State.AwaitingGiveCard;
 
-    public void BeginSwapDrawnCard()
-    {
-        if (CurrentPhase != GamePhase.CardDrawn) return;
-        SetPhase(GamePhase.SelectingSwapSlot, IsPlayerTurn);
-    }
+        MoveResult result = State.Apply(cmd);
+        if (!result.Ok) return;
 
-    public void OnSlotClicked(CardSlot slot)
-    {
-        switch (CurrentPhase)
+        foreach (var fx in result.Effects)
         {
-            case GamePhase.SelectingSwapSlot:
-                HandleSwapDrawnIntoSlot(slot);
+            DispatchEffect(fx);
+            _ai?.Observe(fx, iAmActor: !prevTurn); // actor = side that was active before the move
+        }
+
+        if (State.Phase != prevPhase || State.IsPlayerTurn != prevTurn || State.PowerStep != prevStep)
+            OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn);
+
+        if (State.AwaitingGiveCard && !prevAwaitGive)
+            OnAwaitingGiveCard?.Invoke(State.GiveByPlayer);
+
+        SyncViews();
+        MaybePromptAI();
+    }
+
+    private void DispatchEffect(GameEffect fx)
+    {
+        switch (fx.Kind)
+        {
+            case EffectKind.CardDrawn:
+                OnCardDrawn?.Invoke(fx.Card);
                 break;
-
-            case GamePhase.UsingPower:
-                HandlePowerSlotSelection(slot);
+            case EffectKind.SlotRevealed:
+                OnSlotRevealed?.Invoke(fx.Slot.Side, fx.Slot.Index, fx.Card);
                 break;
-
-            case GamePhase.DrawingCard:
-                if (_awaitingGiveCard)
-                    HandleGiveCardSelection(slot, true);
-                else
-                    HandleMatchClick(slot);
+            case EffectKind.MatchResolved:
+                OnMatchResolved?.Invoke(fx.Slot.Side, fx.Slot.Index, fx.Card, fx.Bool1, fx.Bool2);
+                break;
+            case EffectKind.PenaltyAdded:
+                OnPenaltyAdded?.Invoke(fx.Bool1, fx.Slot.Index);
+                break;
+            case EffectKind.InformedTradeReady:
+                OnInformedTradeReady?.Invoke(fx.Card, fx.Card2);
+                break;
+            case EffectKind.GiveDone:
+                OnGiveCardDone?.Invoke();
+                break;
+            case EffectKind.SlotsSwapped:
+                OnSlotsSwapped?.Invoke();
+                break;
+            case EffectKind.GameOver:
+                OnGameOver?.Invoke(State.WinnerSide());
                 break;
         }
     }
 
-    public void CallCambio()
-    {
-        if (CurrentPhase != GamePhase.DrawingCard) return;
-        if (_awaitingGiveCard) return;
-        if (CambioHasBeenCalled) return;  
+    // ----------------------------------------------------------------------
+    // Player-facing helpers (called by PlayerInput / GameUI)
+    // ----------------------------------------------------------------------
 
-        CambioHasBeenCalled = true;
-        IsPlayerCambioCaller = IsPlayerTurn;
-        FinalRoundTurnsLeft = 1;
-        SetPhase(GamePhase.CambioCalled, IsPlayerTurn);
-        EndTurn();
+    public void StartPlay()
+    {
+        if (State == null) return;
+        State.StartPlay();
+        OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn);
+        MaybePromptAI();
     }
 
-    public void EndTurn()
+    /// <summary>Tell the view to show swap arrows. No state mutation: SwapDrawnIntoSlot is
+    /// already legal in CardDrawn, so this is purely a cosmetic phase signal for the UI.</summary>
+    public void EnterSwapSelection()
     {
-        DrawnCard = null;
-        ActivePower = CardPower.None;
-        CurrentPowerStep = PowerStep.None;
+        if (State == null || State.Phase != GamePhase.CardDrawn) return;
+        OnPhaseChanged?.Invoke(GamePhase.SelectingSwapSlot, State.IsPlayerTurn);
+    }
 
-        _matchedThisTurn = false;
-        _awaitingGiveCard = false;
-        _opponentMatchedSlot = null;
-        ClearArmedSlot();
+    public void SetSlotArmed(SlotRef s, bool armed)
+    {
+        var view = GetSlotView(s);
+        if (view != null) view.SetArmed(armed);
+    }
 
-        if (CambioHasBeenCalled && IsPlayerTurn != IsPlayerCambioCaller)
+    public CardSlot GetSlotView(SlotRef s)
+    {
+        CardSlot[] arr = (s.Side, s.Zone) switch
         {
-            FinalRoundTurnsLeft--;
-            if (FinalRoundTurnsLeft <= 0)
-            {
-                SetPhase(GamePhase.GameOver, IsPlayerTurn);
-                return;
-            }
-        }
-        
-        SetPhase(GamePhase.DrawingCard, !IsPlayerTurn);
+            (GameState.PlayerSide, Zone.Hand) => playerSlots,
+            (GameState.AISide, Zone.Hand) => aiSlots,
+            (GameState.PlayerSide, Zone.Penalty) => playerPenaltySlots,
+            (GameState.AISide, Zone.Penalty) => aiPenaltySlots,
+            _ => null
+        };
+        if (arr == null || s.Index < 0 || s.Index >= arr.Length) return null;
+        return arr[s.Index];
     }
 
-    public void FinishPeeking()
+    /// <summary>The player's allowed opening peek: their first two hand cards.</summary>
+    public (Card, Card) PeekInitialIds()
     {
-        if (CurrentPhase != GamePhase.UsingPower) return;
-        EndTurn();
+        Card a = State.GetCard(new SlotRef(GameState.PlayerSide, Zone.Hand, 0));
+        Card b = State.GetCard(new SlotRef(GameState.PlayerSide, Zone.Hand, 1));
+        return (a, b);
     }
 
-    public void ConfirmInformedTrade()
-    {
-        if (CurrentPhase != GamePhase.UsingPower || CurrentPowerStep != PowerStep.ConfirmingTrade)
-            return;
+    public int GetScore(bool player) => State.Score(player ? GameState.PlayerSide : GameState.AISide);
 
-        SwapSlots(_tradeOpponentSlot, _tradeOwnSlot);
-        _tradeOpponentSlot = null;
-        _tradeOwnSlot = null;
-        EndTurn();
+    // ----------------------------------------------------------------------
+    // View reconciliation + AI loop
+    // ----------------------------------------------------------------------
+
+    /// <summary>Make every slot view match the truth: visible iff it holds a card. Clears arming.</summary>
+    private void SyncViews()
+    {
+        Reconcile(playerSlots, GameState.PlayerSide, Zone.Hand);
+        Reconcile(aiSlots, GameState.AISide, Zone.Hand);
+        Reconcile(playerPenaltySlots, GameState.PlayerSide, Zone.Penalty);
+        Reconcile(aiPenaltySlots, GameState.AISide, Zone.Penalty);
     }
 
-    public void AttemptMatch(CardSlot slot, bool byPlayer)
+    private void Reconcile(CardSlot[] slots, int side, Zone zone)
     {
-        ClearArmedSlot();
-
-        if (CurrentPhase != GamePhase.DrawingCard) return;
-        if (_matchedThisTurn || _awaitingGiveCard) return;
-        if (slot == null || !slot.IsActive || slot.Card == null) return;
-        if (deck.TopDiscard == null) return;
-
-        bool success = slot.Card.displayNumber == deck.TopDiscard.displayNumber;
-
-        if (!success)
-        {
-            // Failed: card stays exactly where it is, attempter just takes a penalty.
-            ApplyPenalty(byPlayer);
-            OnMatchResolved?.Invoke(slot, false, byPlayer);
-            return;
-        }
-
-        _matchedThisTurn = true;
-        bool matchersOwn = slot.BelongsToPlayer == byPlayer;
-        deck.Discard(slot.Card);
-
-        if (matchersOwn)
-        {
-            // Matched your own card -> it leaves play, you have one fewer card.
-            slot.SetInactive();
-            OnMatchResolved?.Invoke(slot, true, byPlayer);
-        }
-        else
-        {
-            // Matched opponent's card -> theirs leaves play, you must hand one of
-            // yours into the now-empty slot.
-            _opponentMatchedSlot = slot;
-            _awaitingGiveCard = true;
-            _giveByPlayer = byPlayer;
-            OnMatchResolved?.Invoke(slot, true, byPlayer);
-            OnAwaitingGiveCard?.Invoke(byPlayer);
-        }
-    }
-
-    public void GiveCardToOpponent(CardSlot giverSlot)
-    {
-        if (!_awaitingGiveCard || giverSlot == null) return;
-        if (giverSlot.BelongsToPlayer != _giveByPlayer || !giverSlot.IsActive) return;
-
-        Card given = giverSlot.Card;
-        giverSlot.SetInactive();
-        _opponentMatchedSlot.SetCard(given);
-
-        CardSlot receiver = _opponentMatchedSlot;
-        _awaitingGiveCard = false;
-        _opponentMatchedSlot = null;
-
-        OnSlotsSwapped?.Invoke(giverSlot, receiver);
-        OnGiveCardDone?.Invoke();
-    }
-
-    private void HandleMatchClick(CardSlot slot)
-    {
-        if (_matchedThisTurn) return;
-        if (deck.TopDiscard == null) return;
-        if (slot == null || !slot.IsActive || slot.Card == null) return; 
-
-        if (_armedMatchSlot == null)
-        {
-            _armedMatchSlot = slot;
-            slot.SetArmed(true);
-        }
-        else if (_armedMatchSlot == slot)
-        {
-            AttemptMatch(slot, true);
-        }
-        else
-        {
-            ClearArmedSlot();
-        }
-    }
-
-    private void HandleGiveCardSelection(CardSlot slot, bool byPlayer)
-    {
-        if (!byPlayer || slot == null) return;
-        if (slot.BelongsToPlayer != _giveByPlayer || !slot.IsActive) return;
-        GiveCardToOpponent(slot);
-    }
-
-    private void ApplyPenalty(bool forPlayer)
-    {
-        CardSlot[] slots = forPlayer ? playerPenaltySlots : aiPenaltySlots;
-
-        int index = -1;
+        if (slots == null) return;
         for (int i = 0; i < slots.Length; i++)
         {
-            if (!slots[i].IsActive) { index = i; break; }
-        }
-        if (index < 0) return;            
-
-        Card pen = deck.DrawFromDeck();
-        if (pen == null) return;
-
-        slots[index].Assign(pen, index, forPlayer);
-        slots[index].Reactivate();
-        OnPenaltyAdded?.Invoke(forPlayer, index);
-    }
-
-    private void ClearArmedSlot()
-    {
-        if (_armedMatchSlot == null) return;
-        _armedMatchSlot.SetArmed(false);
-        _armedMatchSlot = null;
-    }
-
-    public int GetScore(bool forPlayer)
-    {
-        CardSlot[] slots = forPlayer ? playerSlots : aiSlots;
-        int total = 0;
-        foreach (var slot in slots)
-            if (slot.IsActive) total += slot.Card.Value;
-
-        CardSlot[] pens = forPlayer ? playerPenaltySlots : aiPenaltySlots;
-        foreach (var slot in pens)
-            if (slot.IsActive && slot.Card != null) total += slot.Card.Value;
-
-        return total;
-    }
-
-    public CardSlot[] GetPlayerSlots() => playerSlots;
-    public CardSlot[] GetAISlots() => aiSlots;
-    public Deck Getdeck() => deck;
-
-    private void DealInitialHands()
-    {
-        for (int i = 0; i < playerSlots.Length; i++)
-            playerSlots[i].Assign(deck.DrawFromDeck(), i, true);
-
-        for (int i = 0; i < aiSlots.Length; i++)
-            aiSlots[i].Assign(deck.DrawFromDeck(), i, false);
-        
-        // Penalties 
-        foreach (var s in playerPenaltySlots) s.SetInactive();
-        foreach (var s in aiPenaltySlots)     s.SetInactive();
-
-        SetPhase(GamePhase.Dealing, true);
-    }
-
-    private void HandleSwapDrawnIntoSlot(CardSlot slot)
-    {
-        if (!IsOwnSlot(slot)) return;
-        Card displaced = slot.SwapCard(DrawnCard);
-        deck.Discard(displaced);
-        EndTurn();
-    }
-
-    private void BeginPower(CardPower power)
-    {
-        CurrentPowerStep = power switch
-        {
-            CardPower.LookOwnCard      => PowerStep.LookingOwn,
-            CardPower.LookOpponentCard => PowerStep.LookingOpponent,
-            CardPower.BlindSwap        => PowerStep.SelectingPowerSwapSource,
-            CardPower.LookAndSwap      => PowerStep.SelectingTradeOpponent,
-            _                          => PowerStep.None
-        };
-
-        SetPhase(GamePhase.UsingPower, IsPlayerTurn);
-    }
-
-    private void HandlePowerSlotSelection(CardSlot slot)
-    {
-        if (slot == null || !slot.IsActive || slot.Card == null) return;
-        
-        switch (CurrentPowerStep)
-        {
-            case PowerStep.LookingOwn:
-                if (!IsOwnSlot(slot)) return;
-                OnSlotRevealed?.Invoke(slot);
-                break;
-
-            case PowerStep.LookingOpponent:
-                if (!IsOpponentSlot(slot)) return;
-                OnSlotRevealed?.Invoke(slot);
-                break;
-
-            case PowerStep.SelectingPowerSwapSource:
-                if (!IsOwnSlot(slot)) return;
-                _powerSourceSlot = slot;
-                CurrentPowerStep = PowerStep.SelectingPowerSwapTarget;
-                SetPhase(GamePhase.UsingPower, IsPlayerTurn);
-                break;
-
-            case PowerStep.SelectingPowerSwapTarget:
-                if (!IsOpponentSlot(slot)) return;
-                SwapSlots(_powerSourceSlot, slot);
-                _powerSourceSlot = null;
-                EndTurn();
-                break;
-
-            case PowerStep.SelectingTradeOpponent:
-                if (!IsOpponentSlot(slot)) return;
-                _tradeOpponentSlot = slot;
-                CurrentPowerStep = PowerStep.SelectingTradeOwn;
-                SetPhase(GamePhase.UsingPower, IsPlayerTurn);
-                break;
-
-            case PowerStep.SelectingTradeOwn:
-                if (!IsOwnSlot(slot)) return;
-                _tradeOwnSlot = slot;
-                CurrentPowerStep = PowerStep.ConfirmingTrade;
-                OnInformedTradeReady?.Invoke(_tradeOpponentSlot, _tradeOwnSlot);
-                SetPhase(GamePhase.UsingPower, IsPlayerTurn);
-                break;
+            if (slots[i] == null) continue;
+            bool active = State.IsActive(new SlotRef(side, zone, i));
+            slots[i].SetVisible(active);
+            slots[i].SetArmed(false);
         }
     }
 
-    private void SwapSlots(CardSlot a, CardSlot b)
+    private void MaybePromptAI()
     {
-        Card temp = a.SwapCard(b.Card);
-        b.SwapCard(temp);
-        OnSlotsSwapped?.Invoke(a, b);
+        if (State.IsTerminal || State.IsPlayerTurn) return;
+        if (!IsDecisionPhase(State.Phase)) return;
+
+        GameCommand cmd = _ai.ChooseMove(State);
+        StartCoroutine(SubmitAfterDelay(cmd, aiThinkSeconds));
     }
 
-    private bool IsOwnSlot(CardSlot slot) => slot.BelongsToPlayer == IsPlayerTurn;
-    private bool IsOpponentSlot(CardSlot slot) => slot.BelongsToPlayer != IsPlayerTurn;
-    
+    private static bool IsDecisionPhase(GamePhase p) =>
+        p == GamePhase.DrawingCard || p == GamePhase.CardDrawn ||
+        p == GamePhase.SelectingSwapSlot || p == GamePhase.UsingPower;
+
+    private IEnumerator SubmitAfterDelay(GameCommand cmd, float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        SubmitAI(cmd);
+    }
 }

@@ -1,69 +1,45 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// What used to be the Deck MonoBehaviour is now purely a *card catalog*: it maps physical
+/// card ids (0..53) to sprites and produces the initial shuffled ordering. All deck LOGIC
+/// (drawing, discard, reshuffle) moved into GameState, because the AI must be able to run
+/// that logic thousands of times per move without touching the scene.
+///
+/// Inspector setup: drop the 54 face sprites into cardSprites in id order
+///   0..12 black A..K, 13..25 red A..K, 26..38 red A..K, 39..51 black A..K, 52..53 jokers
+/// and assign cardBack + emptyDiscard.
+/// </summary>
 public class Deck : MonoBehaviour
 {
+    [Header("Sprites (index = card id, length 54)")]
     [SerializeField] private Sprite[] cardSprites;
     [SerializeField] private Sprite cardBack;
-
-    private Card[] _shuffledDeck;
-    private int _topIndex = 0;
-    private Stack<Card> _discardPile = new();
+    [SerializeField] private Sprite emptyDiscard;
 
     public Sprite CardBack => cardBack;
-    public Card TopDiscard => _discardPile.Count > 0 ? _discardPile.Peek() : null;
+    public Sprite EmptyDiscard => emptyDiscard;
 
-    void Awake()
+    public Sprite SpriteForId(int id)
     {
-        BuildAndShuffle();
+        if (id < 0 || cardSprites == null || id >= cardSprites.Length) return cardBack;
+        return cardSprites[id];
     }
 
-    private void BuildAndShuffle()
-    {
-        _shuffledDeck = new Card[54];
-        for (int i = 0; i < 54; i++)
-        {
-            _shuffledDeck[i] = new Card
-            {
-                sprite = cardSprites[i],
-                displayNumber = GetNumber(i),
-                isRed = GetIsRed(i)
-            };
-        }
+    public Sprite SpriteFor(Card c) => c.IsNone ? cardBack : SpriteForId(c.Id);
 
-        for (int i = _shuffledDeck.Length - 1; i > 0; i--)
+    /// <summary>Real-game shuffle (uses Unity Random). GameState does deterministic reshuffles itself.</summary>
+    public int[] BuildShuffledDeck()
+    {
+        int n = Card.DeckSize;
+        var ids = new List<int>(n);
+        for (int i = 0; i < n; i++) ids.Add(i);
+        for (int i = n - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);
-            (_shuffledDeck[i], _shuffledDeck[j]) = (_shuffledDeck[j], _shuffledDeck[i]);
+            (ids[i], ids[j]) = (ids[j], ids[i]);
         }
-    }
-
-    public Card DrawFromDeck()
-    {
-        if (_topIndex >= _shuffledDeck.Length) return null;
-        return _shuffledDeck[_topIndex++];
-    }
-
-    public Card DrawFromDiscard()
-    {
-        return _discardPile.Count > 0 ? _discardPile.Pop() : null;
-    }
-
-    public void Discard(Card card)
-    {
-        _discardPile.Push(card);
-    }
-
-    private int GetNumber(int index)
-    {
-        if (index >= 52) return 0;
-        return (index % 13) + 1;
-    }
-
-    private bool GetIsRed(int index)
-    {
-        if (index >= 52) return false;
-        int suit = index / 13;
-        return suit == 1 || suit == 2;
+        return ids.ToArray();
     }
 }

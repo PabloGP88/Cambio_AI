@@ -1,57 +1,50 @@
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
-public class CardSlot : MonoBehaviour
+/// <summary>
+/// A slot is now a pure VIEW. It no longer owns a Card or any rules — it just knows its
+/// address (side, zone, index), shows/hides itself to mirror GameState, can highlight when
+/// "armed" for a match, and forwards taps to PlayerInput as an addressed click.
+/// GameManager.SyncViews() drives visibility; nothing here mutates game state.
+/// </summary>
+public class CardSlot : MonoBehaviour, IPointerClickHandler
 {
-    [SerializeField] private Image highlight;
-    [SerializeField] private Color armColor = Color.green;
+    [Header("Optional visuals")]
+    [SerializeField] private GameObject highlight;   // shown when armed
+    [SerializeField] private SpriteRenderer faceOrBack; // optional: a card-back image, etc.
 
-    public Card Card { get; private set; }
-    public int SlotIndex { get; private set; }
-    public bool BelongsToPlayer { get; private set; }
-    public bool IsActive { get; private set; } = true;
+    public int Side { get; private set; }
+    public Zone Zone { get; private set; }
+    public int Index { get; private set; }
 
-    public void Assign(Card card, int index, bool isPlayer)
+    public void Init(int side, Zone zone, int index)
     {
-        Card = card;
-        SlotIndex = index;
-        BelongsToPlayer = isPlayer;
-        IsActive = true;
+        Side = side;
+        Zone = zone;
+        Index = index;
     }
 
-    public Card SwapCard(Card incoming)
+    public void SetVisible(bool visible)
     {
-        Card previous = Card;
-        Card = incoming;
-        return previous;
+        if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
     }
 
-    public void SetCard(Card card)
+    public void SetArmed(bool armed)
     {
-        Card = card;
+        if (highlight != null) highlight.SetActive(armed);
     }
 
-    public void SetInactive()
+    public void OnPointerClick(PointerEventData eventData)
     {
-        IsActive = false;
-        SetArmed(false);
-        gameObject.SetActive(false);
+        if (GameManager.Instance != null)
+            GameManager.Instance.Player.ClickSlot(Side, Zone, Index);
     }
 
-    public void Reactivate()
-    {
-        IsActive = true;
-        gameObject.SetActive(true);
-    }
-    public void SetArmed(bool on)
-    {
-        if (highlight == null) return;
-        highlight.color = armColor;
-        highlight.enabled = on;
-    }
-
+    // If you wire clicks via a UI Button or a custom collider instead of IPointerClickHandler,
+    // just call this from that handler:
     public void OnClicked()
     {
-        GameManager.Instance.OnSlotClicked(this);
+        if (GameManager.Instance != null)
+            GameManager.Instance.Player.ClickSlot(Side, Zone, Index);
     }
 }
