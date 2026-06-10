@@ -67,11 +67,39 @@ public class GameUI : MonoBehaviour
     [Header("Game Over UI")]
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TextMeshProUGUI gameOverText;
-
+    
+    [Header("Action AI Sign")]
+    [SerializeField] private TextMeshProUGUI actionText;
+    [SerializeField] private string[] idlePhrases;
+    [SerializeField] private string[] actionPhrases;
+    
     private GameManager _gm;
     private Deck _deck;
     private Coroutine _matchFlash;
 
+    // ----------------------------------------------------------------------
+    // AI action sign  —  fill actionPhrases[] in this exact order:
+    //   0  thinking
+    //   1  draw from deck        2  draw from discard
+    //   3  discard drawn         4  swap drawn into hand
+    //   5  attempt match         6  give a card
+    //   7  power: look own       8  power: look opponent
+    //   9  power: blind swap     10 power: look & swap (trade)
+    //   11 call cambio
+    // idlePhrases[] = flavour lines shown on the player's turn.
+    // ----------------------------------------------------------------------
+    private const int A_THINKING            = 0;
+    private const int A_DRAW_DECK           = 1;
+    private const int A_DRAW_DISCARD        = 2;
+    private const int A_DISCARD_DRAWN       = 3;
+    private const int A_SWAP_DRAWN          = 4;
+    private const int A_MATCH               = 5;
+    private const int A_GIVE                = 6;
+    private const int A_POWER_LOOK_OWN      = 7;
+    private const int A_POWER_LOOK_OPP      = 8;
+    private const int A_POWER_BLIND_SWAP    = 9;
+    private const int A_POWER_LOOK_AND_SWAP = 10;
+    private const int A_CAMBIO              = 11;
     void Start()
     {
         _gm = GameManager.Instance;
@@ -86,7 +114,10 @@ public class GameUI : MonoBehaviour
         _gm.OnAwaitingGiveCard += HandleAwaitingGiveCard;
         _gm.OnGiveCardDone += HandleGiveCardDone;
         _gm.OnPenaltyAdded += HandlePenaltyAdded;
+        _gm.OnCommandApplied += HandleCommandApplied;
 
+        ShowIdle();
+        
         ResetPenaltyUI();
         SetImageAlpha(matchSlotImage, 0f);
 
@@ -107,6 +138,7 @@ public class GameUI : MonoBehaviour
         _gm.OnAwaitingGiveCard -= HandleAwaitingGiveCard;
         _gm.OnGiveCardDone -= HandleGiveCardDone;
         _gm.OnPenaltyAdded -= HandlePenaltyAdded;
+        _gm.OnCommandApplied -= HandleCommandApplied;
     }
 
     // ----------------------------------------------------------------------
@@ -163,6 +195,8 @@ public class GameUI : MonoBehaviour
             case GamePhase.DrawingCard:
                 SetTurnLabel(isPlayerTurn);
                 RefreshDiscardDisplay();
+                if (isPlayerTurn) ShowIdle();         
+                else              SetAction(A_THINKING); 
                 break;
 
             case GamePhase.CardDrawn:
@@ -178,6 +212,11 @@ public class GameUI : MonoBehaviour
             case GamePhase.UsingPower:
                 if (isPlayerTurn)
                     ShowPowerPrompt();
+                else
+                {
+                    int p = PowerActionIndex(_gm.State.ActivePower);
+                    if (p >= 0) SetAction(p);
+                }
                 break;
 
             case GamePhase.GameOver:
@@ -408,5 +447,51 @@ public class GameUI : MonoBehaviour
     public void RestartGame()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+    
+    private void SetAction(int index)
+    {
+        if (!actionText || actionPhrases == null) return;
+        if (index < 0 || index >= actionPhrases.Length) return;
+        actionText.text = actionPhrases[index];
+    }
+
+    private void ShowIdle()
+    {
+        if (actionText == null) return;
+        if (idlePhrases == null || idlePhrases.Length == 0) { actionText.text = ""; return; }
+        actionText.text = idlePhrases[Random.Range(0, idlePhrases.Length)];
+    }
+
+    private int PowerActionIndex(CardPower power) => power switch
+    {
+        CardPower.LookOwnCard      => A_POWER_LOOK_OWN,
+        CardPower.LookOpponentCard => A_POWER_LOOK_OPP,
+        CardPower.BlindSwap        => A_POWER_BLIND_SWAP,
+        CardPower.LookAndSwap      => A_POWER_LOOK_AND_SWAP,
+        _                          => -1
+    };
+
+    private void HandleCommandApplied(CommandType type, bool byPlayer)
+    {
+        if (byPlayer) return;   // the sign narrates Ben only
+
+        switch (type)
+        {
+            case CommandType.DrawFromDeck:      SetAction(A_DRAW_DECK);    break;
+            case CommandType.DrawFromDiscard:   SetAction(A_DRAW_DISCARD); break;
+
+            case CommandType.DiscardDrawn:
+                // If that discard triggered a power, the UsingPower phase shows it instead.
+                if (_gm.State.Phase != GamePhase.UsingPower) SetAction(A_DISCARD_DRAWN);
+                break;
+
+            case CommandType.SwapDrawnIntoSlot: SetAction(A_SWAP_DRAWN); break;
+            case CommandType.AttemptMatch:      SetAction(A_MATCH);      break;
+            case CommandType.GiveCard:          SetAction(A_GIVE);       break;
+            case CommandType.CallCambio:        SetAction(A_CAMBIO);     break;
+
+            // UsePowerOnSlot / ConfirmTrade / FinishPeeking: keep the current power text.
+        }
     }
 }

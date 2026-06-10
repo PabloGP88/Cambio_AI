@@ -49,6 +49,7 @@ public class GameManager : MonoBehaviour
     public event Action<bool, int> OnPenaltyAdded;                // forPlayer, index
     public event Action OnSlotsSwapped;
     public event Action<int> OnGameOver;                          // winnerSide (-1 draw)
+    public event Action<CommandType, bool> OnCommandApplied; 
 
     private void Awake()
     {
@@ -121,6 +122,8 @@ public class GameManager : MonoBehaviour
 
         if (State.AwaitingGiveCard && !prevAwaitGive)
             OnAwaitingGiveCard?.Invoke(State.GiveByPlayer);
+        
+        OnCommandApplied?.Invoke(cmd.Type, prevTurn); 
 
         SyncViews();
         MaybePromptAI();

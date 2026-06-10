@@ -344,6 +344,29 @@ public class GameState
     private bool DoDiscardDrawn(List<GameEffect> fx)
     {
         if (_phase != GamePhase.CardDrawn || _drawn.IsNone) return false;
+
+
+        Card top = TopDiscard;
+        if (!top.IsNone && _drawn.Number == top.Number)
+        {
+            Card matched = _drawn;
+            Discard(matched);
+            _drawn = Card.None;
+            _activePower = CardPower.None;          // matched cards never fire a power
+
+            fx.Add(new GameEffect
+            {
+                Kind  = EffectKind.MatchResolved,
+                Slot  = SlotRef.None,               // the drawn card lives in no slot
+                Card  = matched,
+                Bool1 = true,                        // success
+                Bool2 = _isPlayerTurn                // byPlayer
+            });
+
+            EndTurn(fx);
+            return true;
+        }
+
         Discard(_drawn);
         _activePower = _drawn.Power;
         _drawn = Card.None;

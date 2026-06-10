@@ -13031,6 +13031,17 @@ MonoBehaviour:
   - {fileID: 613065485}
   gameOverPanel: {fileID: 1310503165}
   gameOverText: {fileID: 811241021}
+  actionText: {fileID: 806114574}
+  idlePhrases:
+  - Skibidy sigma toilet, chamba fornait
+  actionPhrases:
+  - Thinking, I swear...
+  - Draw deck
+  - Draw discard
+  - attempt match
+  - POWER - LOOKED AT OWN CARD
+  - POWER - BLIND SWAP
+  - Cambio called bitch
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
