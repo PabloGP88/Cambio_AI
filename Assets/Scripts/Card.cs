@@ -1,8 +1,5 @@
 using System;
 
-/// <summary>
-/// Power a card carries when it is discarded. Pure game concept, no Unity.
-/// </summary>
 public enum CardPower { None, LookOwnCard, LookOpponentCard, BlindSwap, LookAndSwap }
 
 /// <summary>
@@ -20,12 +17,16 @@ public enum CardPower { None, LookOwnCard, LookOpponentCard, BlindSwap, LookAndS
 ///   39..51  suit 3 (black)   ranks 1..13
 ///   52,53   jokers (rank 0)
 /// </summary>
+
 [Serializable]
 public readonly struct Card : IEquatable<Card>
 {
     public readonly int Id;
 
-    public Card(int id) { Id = id; }
+    public Card(int id)
+    {
+        Id = id;
+    }
 
     /// <summary>Number of physical cards in a full deck (52 + 2 jokers).</summary>
     public const int DeckSize = 54;
@@ -38,7 +39,7 @@ public readonly struct Card : IEquatable<Card>
     {
         get
         {
-            if (Id < 0 || Id >= 52) return 0; // none + jokers
+            if (Id is < 0 or >= 52) return 0; // none + jokers
             return (Id % 13) + 1;
         }
     }
