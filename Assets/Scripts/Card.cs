@@ -2,21 +2,13 @@ using System;
 
 public enum CardPower { None, LookOwnCard, LookOpponentCard, BlindSwap, LookAndSwap }
 
-/// <summary>
-/// A card is just an integer id (0..53) into the physical deck. Two cards with
-/// the same rank/colour but different suits are distinct ids (so the *view* can
-/// resolve the right sprite) yet gameplay-identical (Value/Power depend only on
-/// rank/colour). Keeping Card a small readonly struct means GameState arrays are
-/// value types and clone with a single Array.Clone() — which is exactly what
-/// ISMCTS determinization needs to do thousands of times per decision.
-///
-/// Id layout (matches the original Deck):
-///   0..12   suit 0 (black)   ranks 1..13
-///   13..25  suit 1 (red)     ranks 1..13
-///   26..38  suit 2 (red)     ranks 1..13
-///   39..51  suit 3 (black)   ranks 1..13
-///   52,53   jokers (rank 0)
-/// </summary>
+/*
+    ID layout:
+        13..25  suit 1 (red)     ranks 1..13
+        26..38  suit 2 (red)     ranks 1..13
+        39..51  suit 3 (black)   ranks 1..13
+        52,53   jokers (rank 0)
+*/
 
 [Serializable]
 public readonly struct Card : IEquatable<Card>
@@ -28,10 +20,9 @@ public readonly struct Card : IEquatable<Card>
         Id = id;
     }
 
-    /// <summary>Number of physical cards in a full deck (52 + 2 jokers).</summary>
     public const int DeckSize = 54;
 
-    /// <summary>Sentinel for an empty / inactive slot.</summary>
+    //Sentinel for an empty / inactive slot.
     public static readonly Card None = new Card(-1);
     public bool IsNone => Id < 0;
 
@@ -40,25 +31,32 @@ public readonly struct Card : IEquatable<Card>
         get
         {
             if (Id is < 0 or >= 52) return 0; // none + jokers
+            
+            // formula because there are 13 values max in a normal deck, +1 since the minimum value is 1
             return (Id % 13) + 1;
         }
     }
 
+    // This formula for the id works with out deck layout, red are in the middle, there are 4 suits, 1 and 2 are in the middle
+    // if layout is changed, this formula need to be updated as well
     public bool IsRed
     {
         get
         {
-            if (Id < 0 || Id >= 52) return false;
-            int suit = Id / 13;
-            return suit == 1 || suit == 2;
+            if (Id is < 0 or >= 52) return false;
+            
+            var suit = Id / 13;
+            
+            return suit is 1 or 2;
         }
     }
 
+    // This returns the value of the card following cambio rules
     public int Value
     {
         get
         {
-            int n = Number;
+            var n = Number;
             return n switch
             {
                 0 => 0,
@@ -69,11 +67,12 @@ public readonly struct Card : IEquatable<Card>
         }
     }
 
+    // Same but for powers
     public CardPower Power
     {
         get
         {
-            int n = Number;
+            var n = Number;
             return n switch
             {
                 7 or 8 => CardPower.LookOwnCard,
@@ -86,7 +85,6 @@ public readonly struct Card : IEquatable<Card>
     }
 
     public bool Equals(Card other) => Id == other.Id;
-    public override bool Equals(object obj) => obj is Card c && Equals(c);
+    public override bool Equals(object obj) => obj is Card card && Equals(card);
     public override int GetHashCode() => Id;
-    public override string ToString() => IsNone ? "None" : $"#{Id}(n{Number}{(IsRed ? "R" : "B")})";
 }
