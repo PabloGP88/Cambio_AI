@@ -1,18 +1,25 @@
 using System;
 
-/// <summary>Which collection a slot lives in. Penalty cards are matchable/scorable too.</summary>
-public enum Zone { Hand, Penalty }
+/// <summary>Tells what card is bring targeted, in normal "hand" or one of the penalty ones.</summary>
+public enum Zone
+{
+    Hand, 
+    Penalty
+}
 
-public enum Side { Player = 0, AI = 1 }
+public enum Side
+{
+    Player = 0, 
+    AI = 1
+}
 
 /// <summary>
-/// Serializable address of a slot: (side, zone, index). No MonoBehaviour reference,
-/// so commands can be logged, replayed, sent over a network, and fed to search.
+/// Address of a card slot: (side, zone, index)
 /// </summary>
 [Serializable]
 public readonly struct SlotRef : IEquatable<SlotRef>
 {
-    public readonly int Side;   // 0 = player, 1 = ai
+    public readonly int Side;   
     public readonly Zone Zone;
     public readonly int Index;
 
@@ -41,11 +48,8 @@ public enum CommandType
     CallCambio
 }
 
-/// <summary>
-/// Every legal action in the game, as data. This is the ONLY thing GameState.Apply
-/// consumes — the human (via PlayerInput) and the AI (via AICambioAgent) both produce
-/// these, so there is exactly one rules path and they can never drift.
-/// </summary>
+//  Command is what PLayer and AI will use to send the game state to activate the actions that can be done in Cambio
+
 [Serializable]
 public readonly struct GameCommand : IEquatable<GameCommand>
 {
@@ -58,7 +62,7 @@ public readonly struct GameCommand : IEquatable<GameCommand>
         Slot = slot;
     }
 
-    // Factories ------------------------------------------------------------
+    // Default ones to iterate faster
     public static GameCommand DrawFromDeck()        => new(CommandType.DrawFromDeck, SlotRef.None);
     public static GameCommand DrawFromDiscard()     => new(CommandType.DrawFromDiscard, SlotRef.None);
     public static GameCommand DiscardDrawn()        => new(CommandType.DiscardDrawn, SlotRef.None);
@@ -66,8 +70,12 @@ public readonly struct GameCommand : IEquatable<GameCommand>
     public static GameCommand FinishPeeking()       => new(CommandType.FinishPeeking, SlotRef.None);
     public static GameCommand CallCambio()          => new(CommandType.CallCambio, SlotRef.None);
     public static GameCommand SwapDrawnInto(SlotRef s) => new(CommandType.SwapDrawnIntoSlot, s);
+    
+    // This is to use a power on a specific slot
     public static GameCommand UsePowerOn(SlotRef s)    => new(CommandType.UsePowerOnSlot, s);
     public static GameCommand Match(SlotRef s)         => new(CommandType.AttemptMatch, s);
+    
+    // When AI or Player matches their opponent card, they give one of their cards to them
     public static GameCommand Give(SlotRef s)          => new(CommandType.GiveCard, s);
 
     public bool Equals(GameCommand o) => Type == o.Type && Slot.Equals(o.Slot);

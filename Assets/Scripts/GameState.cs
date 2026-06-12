@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public enum GamePhase
 {
@@ -45,8 +46,8 @@ public struct GameEffect
     public SlotRef Slot2;
     public Card Card;
     public Card Card2;
-    public bool Bool1;
-    public bool Bool2;
+    public bool Success;
+    public bool ByPlayer;
 }
 
 public struct MoveResult
@@ -60,7 +61,7 @@ public struct MoveResult
 /// The entire game of Cambio as plain data + pure logic. Knows nothing about Unity,
 /// sprites, clicks, or animation. It is:
 ///   - the single source of truth for the live game (owned by GameManager), and
-///   - the unit the AI clones, determinizes, and steps during ISMCTS search.
+///   - the unit the AI clones, determinizes, and steps during DISMASTS search.
 ///
 /// Design contract for the AI:
 ///   * Apply() and LegalMoves() depend ONLY on public structure (phase, which slots
@@ -74,37 +75,49 @@ public class GameState
 {
     public const int PlayerSide = 0;
     public const int AISide = 1;
+    
+    public int HandSize
+    {
+        get; 
+        private set;
+    }
 
-    // --- Layout (fixed at construction) ---
-    public int HandSize { get; private set; }
-    public int PenaltySize { get; private set; }
+    public int PenaltySize
+    {
+        get; 
+        private set;
+    }
 
-    // --- Mutable state (everything below is cloned) ---
+    // The game, the layout
     private Card[][] _hand;       // [side][index]
     private Card[][] _penalty;    // [side][index]
     private List<Card> _drawPile; // end of list = top of deck
     private List<Card> _discard;  // end of list = top of discard
 
+    // The current state of the game
     private GamePhase _phase;
     private PowerStep _powerStep;
     private bool _isPlayerTurn;
-    private Card _drawn;
-    private CardPower _activePower;
+    private Card _drawn; // card just picked up
+    private CardPower _activePower; // if there's a power, which one is currently being used
 
+    
+    // Endgame to set final turn
     private bool _cambioCalled;
     private int _cambioCallerSide;
     private int _finalRoundTurnsLeft;
-
+    
+    // flags
     private bool _matchedThisTurn;
     private bool _awaitingGiveCard;
     private SlotRef _matchReceiver;     // opponent slot to be filled by the giver
     private bool _awaitingPeekConfirm;  // a look-power peeked; only FinishPeeking is legal now
-
+    
     private SlotRef _powerSource;
     private SlotRef _tradeOpponent;
     private SlotRef _tradeOwn;
 
-    private Random _rng;
+    private Random _rng; // have random shuffle each time
 
     // --- Public read-only surface ---
     public GamePhase Phase => _phase;
@@ -122,7 +135,7 @@ public class GameState
     public bool AwaitingPeekConfirm => _awaitingPeekConfirm;
     public bool MatchedThisTurn => _matchedThisTurn;
     public bool IsTerminal => _phase == GamePhase.GameOver;
-    public Card TopDiscard => _discard.Count > 0 ? _discard[_discard.Count - 1] : Card.None;
+    public Card TopDiscard => _discard.Count > 0 ? _discard[^1] : Card.None;
     public int DrawPileCount => _drawPile.Count;
     public int DiscardCount => _discard.Count;
 
@@ -131,6 +144,9 @@ public class GameState
     // ----------------------------------------------------------------------
 
     /// <param name="shuffledIds">A pre-shuffled ordering of every physical card id.</param>
+    /// <param name="handSize"></param>
+    /// <param name="penaltySize"></param>
+    /// <param name="seed"></param>
     public GameState(IReadOnlyList<int> shuffledIds, int handSize, int penaltySize, int seed)
     {
         HandSize = handSize;
@@ -138,15 +154,15 @@ public class GameState
         _rng = new Random(seed);
 
         _drawPile = new List<Card>(shuffledIds.Count);
-        foreach (int id in shuffledIds) _drawPile.Add(new Card(id));
+        foreach (var id in shuffledIds) _drawPile.Add(new Card(id));
         _discard = new List<Card>();
 
         _hand = new[] { NewSlots(handSize), NewSlots(handSize) };
         _penalty = new[] { NewSlots(penaltySize), NewSlots(penaltySize) };
 
-        // Deal alternating-free: player then ai (matches original DealInitialHands).
-        for (int i = 0; i < handSize; i++) _hand[PlayerSide][i] = DrawNoReshuffle();
-        for (int i = 0; i < handSize; i++) _hand[AISide][i] = DrawNoReshuffle();
+        // Deal alternating-free: player then AI (matches original DealInitialHands).
+        for (var i = 0; i < handSize; i++) _hand[PlayerSide][i] = DrawNoReshuffle();
+        for (var i = 0; i < handSize; i++) _hand[AISide][i] = DrawNoReshuffle();
         // penalties start empty (None)
 
         _phase = GamePhase.Dealing;
@@ -337,7 +353,7 @@ public class GameState
         if (c.IsNone) return false;
         _drawn = c;
         _phase = GamePhase.CardDrawn;
-        fx.Add(new GameEffect { Kind = EffectKind.CardDrawn, Slot = new SlotRef(ActiveSide, Zone.Hand, -1), Card = c, Bool1 = _isPlayerTurn });
+        fx.Add(new GameEffect { Kind = EffectKind.CardDrawn, Slot = new SlotRef(ActiveSide, Zone.Hand, -1), Card = c, Success = _isPlayerTurn });
         return true;
     }
 
@@ -359,8 +375,8 @@ public class GameState
                 Kind  = EffectKind.MatchResolved,
                 Slot  = SlotRef.None,               // the drawn card lives in no slot
                 Card  = matched,
-                Bool1 = true,                        // success
-                Bool2 = _isPlayerTurn                // byPlayer
+                Success = true,                        // success
+                ByPlayer = _isPlayerTurn                // byPlayer
             });
 
             EndTurn(fx);
@@ -459,7 +475,7 @@ public class GameState
             // Faithful to original: failed match just adds a penalty; the turn's
             // match flag is NOT consumed, so another attempt is technically legal.
             ApplyPenalty(ActiveSide, fx);
-            fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Bool1 = false, Bool2 = _isPlayerTurn });
+            fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Success = false, ByPlayer = _isPlayerTurn });
             return true;
         }
 
@@ -467,7 +483,7 @@ public class GameState
         bool matchersOwn = s.Side == ActiveSide;
         Discard(c);
         SetCard(s, Card.None);
-        fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Bool1 = true, Bool2 = _isPlayerTurn });
+        fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Success = true, ByPlayer = _isPlayerTurn });
 
         if (!matchersOwn)
         {
@@ -594,7 +610,7 @@ public class GameState
             Kind = EffectKind.PenaltyAdded,
             Slot = new SlotRef(side, Zone.Penalty, idx),
             Card = pen,
-            Bool1 = side == PlayerSide
+            Success = side == PlayerSide
         });
     }
 
@@ -603,7 +619,7 @@ public class GameState
         Kind = EffectKind.SlotRevealed,
         Slot = s,
         Card = GetCard(s),
-        Bool1 = _isPlayerTurn // the active side is the one learning the card
+        Success = _isPlayerTurn // the active side is the one learning the card
     };
 
     // ----------------------------------------------------------------------
@@ -661,9 +677,8 @@ public class GameState
 
     public int Score(int side)
     {
-        int total = 0;
-        foreach (var c in _hand[side]) if (!c.IsNone) total += c.Value;
-        foreach (var c in _penalty[side]) if (!c.IsNone) total += c.Value;
+        var total = _hand[side].Where(c => !c.IsNone).Sum(c => c.Value);
+        total += _penalty[side].Where(c => !c.IsNone).Sum(c => c.Value);
         return total;
     }
 
@@ -676,7 +691,7 @@ public class GameState
     }
 
     // ----------------------------------------------------------------------
-    // ISMCTS support
+    // DISMASTS support
     // ----------------------------------------------------------------------
 
     /// <summary>

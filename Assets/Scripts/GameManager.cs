@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -140,10 +139,10 @@ public class GameManager : MonoBehaviour
                 OnSlotRevealed?.Invoke(fx.Slot.Side, fx.Slot.Index, fx.Card);
                 break;
             case EffectKind.MatchResolved:
-                OnMatchResolved?.Invoke(fx.Slot.Side, fx.Slot.Index, fx.Card, fx.Bool1, fx.Bool2);
+                OnMatchResolved?.Invoke(fx.Slot.Side, fx.Slot.Index, fx.Card, fx.Success, fx.ByPlayer);
                 break;
             case EffectKind.PenaltyAdded:
-                OnPenaltyAdded?.Invoke(fx.Bool1, fx.Slot.Index);
+                OnPenaltyAdded?.Invoke(fx.Success, fx.Slot.Index);
                 break;
             case EffectKind.InformedTradeReady:
                 OnInformedTradeReady?.Invoke(fx.Card, fx.Card2);
