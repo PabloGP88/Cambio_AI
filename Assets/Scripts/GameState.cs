@@ -119,7 +119,7 @@ public class GameState
 
     private Random _rng; // have random shuffle each time
 
-    // --- Public read-only surface ---
+    // Public reads for the AI and the PLayerInput, this is so they dont know the actual value of the cards
     public GamePhase Phase => _phase;
     public PowerStep PowerStep => _powerStep;
     public bool IsPlayerTurn => _isPlayerTurn;
@@ -154,7 +154,13 @@ public class GameState
         _rng = new Random(seed);
 
         _drawPile = new List<Card>(shuffledIds.Count);
-        foreach (var id in shuffledIds) _drawPile.Add(new Card(id));
+        
+        foreach (var id in shuffledIds)
+        {
+            // Create draw pile
+            _drawPile.Add(new Card(id));
+        }
+        // Empty discard
         _discard = new List<Card>();
 
         _hand = new[] { NewSlots(handSize), NewSlots(handSize) };
@@ -163,6 +169,7 @@ public class GameState
         // Deal alternating-free: player then AI (matches original DealInitialHands).
         for (var i = 0; i < handSize; i++) _hand[PlayerSide][i] = DrawNoReshuffle();
         for (var i = 0; i < handSize; i++) _hand[AISide][i] = DrawNoReshuffle();
+        
         // penalties start empty (None)
 
         _phase = GamePhase.Dealing;
@@ -184,7 +191,7 @@ public class GameState
         return a;
     }
 
-    /// <summary>Begin actual play after the opening peek (Dealing -> first DrawingCard).</summary>
+    // Always start play is players turn
     public void StartPlay()
     {
         if (_phase != GamePhase.Dealing) return;
@@ -192,14 +199,11 @@ public class GameState
         _isPlayerTurn = true;
     }
 
-    // ----------------------------------------------------------------------
-    // Cloning (cheap — value-type arrays)
-    // ----------------------------------------------------------------------
 
     /// <summary>Deep copy for search. Pass a fresh seed so determinizations diverge.</summary>
     public GameState Clone(int seed)
     {
-        var g = new GameState
+        var game = new GameState
         {
             HandSize = HandSize,
             PenaltySize = PenaltySize,
@@ -224,30 +228,35 @@ public class GameState
             _tradeOwn = _tradeOwn,
             _rng = new Random(seed)
         };
-        return g;
+        
+        return game;
     }
 
     // ----------------------------------------------------------------------
     // Slot access
     // ----------------------------------------------------------------------
 
-    public Card GetCard(SlotRef s)
+    public Card GetCard(SlotRef slotRef)
     {
-        if (s.IsNone) return Card.None;
-        var arr = s.Zone == Zone.Hand ? _hand[s.Side] : _penalty[s.Side];
-        if (s.Index < 0 || s.Index >= arr.Length) return Card.None;
-        return arr[s.Index];
+        if (slotRef.IsNone) return Card.None;
+        var cards = slotRef.Zone == Zone.Hand ? _hand[slotRef.Side] : _penalty[slotRef.Side];
+        
+        if (slotRef.Index < 0 || slotRef.Index >= cards.Length) return Card.None;
+        
+        return cards[slotRef.Index];
     }
 
-    private void SetCard(SlotRef s, Card c)
+    private void SetCard(SlotRef slotRef, Card card)
     {
-        var arr = s.Zone == Zone.Hand ? _hand[s.Side] : _penalty[s.Side];
-        arr[s.Index] = c;
+        var arr = slotRef.Zone == Zone.Hand ? _hand[slotRef.Side] : _penalty[slotRef.Side];
+        arr[slotRef.Index] = card;
     }
 
     /// <summary>A slot is "active" iff it currently holds a card.</summary>
     public bool IsActive(SlotRef s) => !GetCard(s).IsNone;
 
+    
+    // This method is really importat since this is where the address is generated, it uses yield retunr so whenever its called it remmeebrs its last state
     private IEnumerable<SlotRef> ActiveSlotsOf(int side)
     {
         for (int i = 0; i < _hand[side].Length; i++)
@@ -256,15 +265,14 @@ public class GameState
             if (!_penalty[side][i].IsNone) yield return new SlotRef(side, Zone.Penalty, i);
     }
 
-    // ----------------------------------------------------------------------
-    // Legal moves — the action space the AI picks from
-    // ----------------------------------------------------------------------
 
+    // Legal moves — the action space the AI picks from
     public List<GameCommand> LegalMoves()
     {
         var moves = new List<GameCommand>();
         if (_phase == GamePhase.GameOver || _phase == GamePhase.Dealing) return moves;
 
+        // to determine legal moves for each possible game phase
         switch (_phase)
         {
             case GamePhase.DrawingCard:
@@ -280,6 +288,8 @@ public class GameState
                     if (!_cambioCalled) moves.Add(GameCommand.CallCambio());
                     if (!_matchedThisTurn && _discard.Count > 0)
                     {
+                        // Option to match all available cards from the player or AI
+                        
                         foreach (var s in ActiveSlotsOf(PlayerSide)) moves.Add(GameCommand.Match(s));
                         foreach (var s in ActiveSlotsOf(AISide)) moves.Add(GameCommand.Match(s));
                     }
@@ -287,10 +297,21 @@ public class GameState
                 break;
 
             case GamePhase.CardDrawn:
+                // No Moves
+                break;
+            
             case GamePhase.SelectingSwapSlot:
-                if (_phase == GamePhase.CardDrawn) moves.Add(GameCommand.DiscardDrawn());
+                if (_phase == GamePhase.CardDrawn)
+                {
+                    moves.Add(GameCommand.DiscardDrawn());
+                }
+
                 foreach (var s in ActiveSlotsOf(ActiveSide))
+                {
+                    // All available slots can be swaped with
                     moves.Add(GameCommand.SwapDrawnInto(s));
+                }
+                
                 break;
 
             case GamePhase.UsingPower:
@@ -299,15 +320,29 @@ public class GameState
                     moves.Add(GameCommand.FinishPeeking());
                     break;
                 }
+                
+                // Internal switch for each power in _powerStep
                 switch (_powerStep)
                 {
                     case PowerStep.LookingOwn:
+                        // None
+                        break;
                     case PowerStep.SelectingPowerSwapSource:
+                        // None
+                        break;
                     case PowerStep.SelectingTradeOwn:
-                        foreach (var s in ActiveSlotsOf(ActiveSide)) moves.Add(GameCommand.UsePowerOn(s));
+                        foreach (var s in ActiveSlotsOf(ActiveSide))
+                        {
+                            // Setting all available cards as targets for the power
+                            moves.Add(GameCommand.UsePowerOn(s));
+                        }
                         break;
                     case PowerStep.LookingOpponent:
+                        // None
+                        break;
                     case PowerStep.SelectingPowerSwapTarget:
+                        // None
+                        break;
                     case PowerStep.SelectingTradeOpponent:
                         foreach (var s in ActiveSlotsOf(OpponentSide)) moves.Add(GameCommand.UsePowerOn(s));
                         break;
@@ -322,10 +357,8 @@ public class GameState
 
     private bool CanDraw() => _drawPile.Count > 0 || _discard.Count > 1;
 
-    // ----------------------------------------------------------------------
-    // Apply — the single rules path
-    // ----------------------------------------------------------------------
 
+    // Apply is what Ai and player input calls, it does a do per possible actions and only executes the valid ones
     public MoveResult Apply(GameCommand cmd)
     {
         var fx = new List<GameEffect>();
@@ -343,7 +376,11 @@ public class GameState
             CommandType.CallCambio        => DoCallCambio(fx),
             _ => false
         };
-        return new MoveResult { Ok = ok, Effects = fx };
+        return new MoveResult
+        {
+            Ok = ok,
+            Effects = fx 
+        };
     }
 
     private bool DoDraw(bool fromDiscard, List<GameEffect> fx)

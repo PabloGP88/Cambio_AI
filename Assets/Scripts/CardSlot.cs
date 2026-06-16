@@ -31,7 +31,7 @@ public class CardSlot : MonoBehaviour, IPointerClickHandler
 
     public void SetArmed(bool armed)
     {
-        if (highlight != null) highlight.SetActive(armed);
+        if (highlight) highlight.SetActive(armed);
     }
 
     public void OnPointerClick(PointerEventData eventData)
