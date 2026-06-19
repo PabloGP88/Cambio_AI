@@ -57,20 +57,7 @@ public struct MoveResult
     public static MoveResult Fail() => new MoveResult { Ok = false, Effects = null };
 }
 
-/// <summary>
-/// The entire game of Cambio as plain data + pure logic. Knows nothing about Unity,
-/// sprites, clicks, or animation. It is:
-///   - the single source of truth for the live game (owned by GameManager), and
-///   - the unit the AI clones, determinizes, and steps during DISMASTS search.
-///
-/// Design contract for the AI:
-///   * Apply() and LegalMoves() depend ONLY on public structure (phase, which slots
-///     are active, counts, the visible discard top). They never branch on a hidden
-///     card's *value*. So the AI may safely call LegalMoves() on the real state.
-///   * Hidden card *values* must come from the AI's belief layer via Determinize().
-///     The AI must not read face-down card values out of the live state — that's
-///     cheating. (The masking helper AsInformationSet() makes this enforceable.)
-/// </summary>
+// Game State is the entire game in variables, it has public read methods so the AI and player input can act accordingly
 public class GameState
 {
     public const int PlayerSide = 0;
@@ -139,10 +126,7 @@ public class GameState
     public int DrawPileCount => _drawPile.Count;
     public int DiscardCount => _discard.Count;
 
-    // ----------------------------------------------------------------------
     // Construction
-    // ----------------------------------------------------------------------
-
     /// <param name="shuffledIds">A pre-shuffled ordering of every physical card id.</param>
     /// <param name="handSize"></param>
     /// <param name="penaltySize"></param>
@@ -163,10 +147,18 @@ public class GameState
         // Empty discard
         _discard = new List<Card>();
 
-        _hand = new[] { NewSlots(handSize), NewSlots(handSize) };
-        _penalty = new[] { NewSlots(penaltySize), NewSlots(penaltySize) };
+        _hand = new[]
+        {
+            NewSlots(handSize),
+            NewSlots(handSize)
+        };
+        _penalty = new[]
+        {
+            NewSlots(penaltySize),
+            NewSlots(penaltySize)
+        };
 
-        // Deal alternating-free: player then AI (matches original DealInitialHands).
+        // Deal 
         for (var i = 0; i < handSize; i++) _hand[PlayerSide][i] = DrawNoReshuffle();
         for (var i = 0; i < handSize; i++) _hand[AISide][i] = DrawNoReshuffle();
         
@@ -232,10 +224,7 @@ public class GameState
         return game;
     }
 
-    // ----------------------------------------------------------------------
     // Slot access
-    // ----------------------------------------------------------------------
-
     public Card GetCard(SlotRef slotRef)
     {
         if (slotRef.IsNone) return Card.None;
@@ -386,11 +375,21 @@ public class GameState
     private bool DoDraw(bool fromDiscard, List<GameEffect> fx)
     {
         if (_phase != GamePhase.DrawingCard || _awaitingGiveCard) return false;
-        Card c = fromDiscard ? DrawFromDiscard() : DrawCard();
-        if (c.IsNone) return false;
-        _drawn = c;
+        
+        Card card = fromDiscard ? DrawFromDiscard() : DrawCard();
+        if (card.IsNone) return false;
+        
+        _drawn = card;
         _phase = GamePhase.CardDrawn;
-        fx.Add(new GameEffect { Kind = EffectKind.CardDrawn, Slot = new SlotRef(ActiveSide, Zone.Hand, -1), Card = c, Success = _isPlayerTurn });
+        
+        fx.Add(new GameEffect
+        {
+            Kind = EffectKind.CardDrawn, 
+            Slot = new SlotRef(ActiveSide, Zone.Hand, -1),
+            Card = card, 
+            Success = _isPlayerTurn
+        });
+        
         return true;
     }
 
@@ -578,10 +577,7 @@ public class GameState
         return true;
     }
 
-    // ----------------------------------------------------------------------
     // Shared mechanics
-    // ----------------------------------------------------------------------
-
     private void BeginPower(CardPower power)
     {
         _powerStep = power switch
@@ -659,9 +655,7 @@ public class GameState
         Success = _isPlayerTurn // the active side is the one learning the card
     };
 
-    // ----------------------------------------------------------------------
     // Deck plumbing (with discard reshuffle — fixes the null-draw crash)
-    // ----------------------------------------------------------------------
 
     private Card DrawNoReshuffle()
     {
@@ -707,11 +701,9 @@ public class GameState
             (list[i], list[j]) = (list[j], list[i]);
         }
     }
-
-    // ----------------------------------------------------------------------
+    
+    
     // Scoring / queries
-    // ----------------------------------------------------------------------
-
     public int Score(int side)
     {
         var total = _hand[side].Where(c => !c.IsNone).Sum(c => c.Value);
@@ -726,47 +718,5 @@ public class GameState
         if (a < p) return AISide;
         return -1; // draw
     }
-
-    // ----------------------------------------------------------------------
-    // DISMASTS support
-    // ----------------------------------------------------------------------
-
-    /// <summary>
-    /// Ids that are not currently face-up in the discard pile and not "known" to the
-    /// observer. Used by the belief/determinization layer to know what can fill the
-    /// hidden slots and the draw pile. (Belief weighting lives in the AI; this just
-    /// reports the raw multiset of unseen cards given a known-id set.)
-    /// </summary>
-    public List<int> UnseenCardIds(HashSet<int> knownIds)
-    {
-        var present = new HashSet<int>();
-        foreach (var c in _discard) present.Add(c.Id);
-        if (knownIds != null) foreach (var id in knownIds) present.Add(id);
-
-        var result = new List<int>();
-        for (int id = 0; id < Card.DeckSize; id++)
-            if (!present.Contains(id)) result.Add(id);
-        return result;
-    }
-
-    /// <summary>
-    /// Overwrite every slot/draw-pile card the observer does NOT know with a sampled
-    /// id drawn from <paramref name="sampledHidden"/> (order = consumption order).
-    /// The AI builds <paramref name="sampledHidden"/> from its beliefs, then calls this
-    /// on a Clone to produce one fully-specified determinized world to search.
-    ///
-    /// NOTE: This is intentionally a thin hook. The "which slots are known" decision is
-    /// the belief layer's job (see AICambioAgent). Implemented minimally here.
-    /// </summary>
-    public void OverwriteHidden(IReadOnlyCollection<SlotRef> hiddenSlots, IReadOnlyList<int> sampledHidden)
-    {
-        int k = 0;
-        foreach (var s in hiddenSlots)
-        {
-            if (k >= sampledHidden.Count) break;
-            SetCard(s, new Card(sampledHidden[k++]));
-        }
-        // Remaining sampled ids (if any) repopulate the hidden draw pile order, etc.
-        // Left as a deliberate extension point for the belief layer.
-    }
+    
 }

@@ -1,27 +1,5 @@
 using System;
 using System.Collections.Generic;
-
-/// <summary>
-/// AI opponent for Cambio. Intended to become an Information-Set Monte Carlo Tree Search
-/// agent with a Bayesian belief layer that makes its hidden-card guesses (and therefore
-/// its play) feel human.
-///
-/// THIS IS A STUB. Nothing here is real ISMCTS yet — it is the skeleton + references so
-/// the rest of the game is already shaped correctly around it. Today ChooseMove falls
-/// back to a uniform-random legal move so the game is playable end to end. Replace the
-/// body of RunIsmcts() and the belief methods to bring it to life; the surface around it
-/// (GameState.Clone / LegalMoves / Apply / OverwriteHidden, IAgent, GameManager loop)
-/// will not need to change.
-///
-/// The pipeline this is built for:
-///   1. Observe(...)            -> keep beliefs current as cards are seen/moved/declined.
-///   2. ChooseMove(state):
-///        a. LegalMoves(state)                          (action space)
-///        b. for each ISMCTS iteration:
-///             - Determinize(): sample a concrete world consistent with beliefs
-///             - run one MCTS playout in that determinized clone
-///        c. return the most-visited root action
-/// </summary>
 public class AICambioAgent : IAgent
 {
     // --- Tuning knobs (wire these up later) ---
@@ -36,7 +14,7 @@ public class AICambioAgent : IAgent
     // updated from observations (opening peek, look-powers, swaps, declined matches...).
     private CardBeliefs _beliefs;
 
-    public AICambioAgent(int seed = 12345)
+    public AICambioAgent(int seed)
     {
         RandomSeed = seed;
         _rng = new Random(seed);
