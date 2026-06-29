@@ -244,7 +244,9 @@ public class GameState
     /// <summary>A slot is "active" iff it currently holds a card.</summary>
     public bool IsActive(SlotRef s) => !GetCard(s).IsNone;
 
-    
+    /// <summary>the full discard pile every id.</summary>
+    public List<Card> DiscardPile => _discard;
+
     // This method is really importat since this is where the address is generated, it uses yield retunr so whenever its called it remmeebrs its last state
     private IEnumerable<SlotRef> ActiveSlotsOf(int side)
     {
@@ -254,7 +256,8 @@ public class GameState
             if (!_penalty[side][i].IsNone) yield return new SlotRef(side, Zone.Penalty, i);
     }
 
-
+    
+    public IEnumerable<SlotRef> GetActiveSlots(int side) => ActiveSlotsOf(side); // Required so the AI can see active slots
     // Legal moves — the action space the AI picks from
     public List<GameCommand> LegalMoves()
     {
@@ -286,7 +289,12 @@ public class GameState
                 break;
 
             case GamePhase.CardDrawn:
-                // No Moves
+                
+                moves.Add(GameCommand.DiscardDrawn());
+                foreach (var s in ActiveSlotsOf(ActiveSide))
+                {
+                    moves.Add(GameCommand.SwapDrawnInto(s));
+                }
                 break;
             
             case GamePhase.SelectingSwapSlot:
@@ -317,7 +325,10 @@ public class GameState
                         // None
                         break;
                     case PowerStep.SelectingPowerSwapSource:
-                        // None
+                        foreach (var s in ActiveSlotsOf(ActiveSide))
+                        {
+                            moves.Add(GameCommand.UsePowerOn(s));
+                        }
                         break;
                     case PowerStep.SelectingTradeOwn:
                         foreach (var s in ActiveSlotsOf(ActiveSide))
@@ -330,7 +341,10 @@ public class GameState
                         // None
                         break;
                     case PowerStep.SelectingPowerSwapTarget:
-                        // None
+                        foreach (var s in ActiveSlotsOf(ActiveSide))
+                        {
+                            moves.Add(GameCommand.UsePowerOn(s));
+                        }
                         break;
                     case PowerStep.SelectingTradeOpponent:
                         foreach (var s in ActiveSlotsOf(OpponentSide)) moves.Add(GameCommand.UsePowerOn(s));
@@ -701,7 +715,49 @@ public class GameState
             (list[i], list[j]) = (list[j], list[i]);
         }
     }
-    
+
+    public List<int> UnseenCardIds(ICollection<int> knowIds)
+    {
+        var cardsUsed = new HashSet<int>(knowIds);
+        
+        foreach (var cardId in _discard)
+        {
+            cardsUsed.Add(cardId.Id);
+        }
+        
+        if (!_drawn.IsNone) cardsUsed.Add(_drawn.Id);
+        
+        var result =  new List<int>(Card.DeckSize);
+        for (var i = 0; i < Card.DeckSize; i++) 
+        {
+            if (!cardsUsed.Contains(i))
+            {
+                result.Add(i);
+            }
+        }
+        
+        return result;
+    }
+
+
+    public void SetDrawPile(IReadOnlyList<int> orderIds)
+    {
+        _drawPile.Clear();
+
+        
+        
+        for (var i = 0; i < orderIds.Count; i++)
+        {
+            _discard.Add(new Card(i));
+        }
+    }
+    public void OverwriteHidden(IReadOnlyList<SlotRef> slotRefs, IReadOnlyList<int> cardIds)
+    {
+        for (var i = 0; i < slotRefs.Count; i++)
+        {
+            SetCard(slotRefs[i], new Card(cardIds[i]));
+        }
+    }
     
     // Scoring / queries
     public int Score(int side)
@@ -717,6 +773,29 @@ public class GameState
         if (p < a) return PlayerSide;
         if (a < p) return AISide;
         return -1; // draw
+    }
+    
+    // DEBUG
+    public bool IsCardSetWorking()
+    {
+        var seen = new HashSet<int>();
+        bool ok = true;
+
+        void Mark(Card card)
+        {
+            if (!card.IsNone && !seen.Add(card.Id)) ok = false;
+        }
+
+        foreach (var side in new[] { PlayerSide, AISide })
+        {
+            foreach (var c in _hand[side])    Mark(c);
+            foreach (var c in _penalty[side]) Mark(c);
+        }
+        foreach (var c in _drawPile) Mark(c);
+        foreach (var c in _discard)  Mark(c);
+        Mark(_drawn);
+
+        return ok && seen.Count == Card.DeckSize;
     }
     
 }
