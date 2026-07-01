@@ -448,9 +448,20 @@ public class GameState
         if (s.Side != ActiveSide || !IsActive(s)) return false;
 
         Card displaced = GetCard(s);
+        Card placed = _drawn;
+        
         SetCard(s, _drawn);
         Discard(displaced);
         _drawn = Card.None;
+        
+        fx.Add(new GameEffect
+        {
+            Kind  = EffectKind.SlotsSwapped,
+            Slot  = s,
+            Slot2 = SlotRef.None,
+            Card = placed,
+        });
+        
         EndTurn(fx);
         return true;
     }
