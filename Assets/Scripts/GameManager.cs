@@ -48,7 +48,11 @@ public class GameManager : MonoBehaviour
     public event Action<bool, int> OnPenaltyAdded;                // forPlayer, index
     public event Action OnSlotsSwapped;
     public event Action<int> OnGameOver;                          // winnerSide (-1 draw)
-    public event Action<CommandType, bool> OnCommandApplied; 
+    public event Action<CommandType, bool> OnCommandApplied;
+
+    // --- AI search reporting (drives the ISMCTS debug panels in GameUI) ---
+    public event Action<IsmctsReport> OnAiSearchProgress;  // periodic, mid-search snapshots
+    public event Action<IsmctsReport> OnAiSearchDecision;  // once, when a move has been chosen
 
     private void Awake()
     {
@@ -69,6 +73,8 @@ public class GameManager : MonoBehaviour
         InitSlotViews(aiPenaltySlots, GameState.AISide, Zone.Penalty);
 
         _ai = new AICambioAgent(seed);
+        _ai.OnSearchProgress += HandleAiSearchProgress;
+        _ai.OnSearchDecision += HandleAiSearchDecision;
         _ai.OnNewGame(GameState.AISide, State);
 
         SyncViews();
@@ -121,8 +127,8 @@ public class GameManager : MonoBehaviour
 
         if (State.AwaitingGiveCard && !prevAwaitGive)
             OnAwaitingGiveCard?.Invoke(State.GiveByPlayer);
-        
-        OnCommandApplied?.Invoke(cmd.Type, prevTurn); 
+
+        OnCommandApplied?.Invoke(cmd.Type, prevTurn);
 
         SyncViews();
         MaybePromptAI();
@@ -239,17 +245,32 @@ public class GameManager : MonoBehaviour
         if (State.IsTerminal || State.IsPlayerTurn) return;
         if (!IsDecisionPhase(State.Phase)) return;
 
-        GameCommand cmd = _ai.ChooseMove(State);
-        StartCoroutine(SubmitAfterDelay(cmd, aiThinkSeconds));
+        StartCoroutine(RunAiTurn());
     }
 
     private static bool IsDecisionPhase(GamePhase p) =>
         p == GamePhase.DrawingCard || p == GamePhase.CardDrawn ||
         p == GamePhase.SelectingSwapSlot || p == GamePhase.UsingPower;
 
-    private IEnumerator SubmitAfterDelay(GameCommand cmd, float seconds)
+    /// <summary>Drives the AI's decision as a coroutine instead of one blocking call, so a
+    /// multi-thousand-iteration ISMCTS search can yield between chunks and the live stats
+    /// panels in GameUI actually update while Ben "thinks" instead of freezing then
+    /// popping the final answer.</summary>
+    private IEnumerator RunAiTurn()
     {
-        yield return new WaitForSeconds(seconds);
-        SubmitAI(cmd);
+        GameCommand chosen = default;
+        bool done = false;
+
+        IEnumerator routine = _ai.ChooseMoveRoutine(State, cmd => { chosen = cmd; done = true; });
+        while (routine.MoveNext())
+            yield return routine.Current;
+
+        if (!done) yield break; // shouldn't happen, but never submit garbage
+
+        yield return new WaitForSeconds(aiThinkSeconds);
+        SubmitAI(chosen);
     }
+
+    private void HandleAiSearchProgress(IsmctsReport report) => OnAiSearchProgress?.Invoke(report);
+    private void HandleAiSearchDecision(IsmctsReport report) => OnAiSearchDecision?.Invoke(report);
 }

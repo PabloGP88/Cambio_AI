@@ -14,6 +14,11 @@ using UnityEngine.UI;
 ///   - card sprites come from the Deck catalog via deck.SpriteFor(card)
 ///   - events now carry Card structs / int side+index instead of CardSlot objects
 ///   - actions route through GameManager.Player.PressX()
+///
+/// AI "thinking" is no longer a canned phrase picked from an array. GameManager now runs
+/// the AI's search as a coroutine and forwards structured IsmctsReport snapshots via
+/// OnAiSearchProgress (live, mid-search) and OnAiSearchDecision (final, once chosen).
+/// Those drive the two ismcts*Text panels below.
 /// </summary>
 public class GameUI : MonoBehaviour
 {
@@ -67,19 +72,29 @@ public class GameUI : MonoBehaviour
     [Header("Game Over UI")]
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TextMeshProUGUI gameOverText;
-    
+
     [Header("Action AI Sign")]
     [SerializeField] private TextMeshProUGUI actionText;
     [SerializeField] private string[] idlePhrases;
     [SerializeField] private string[] actionPhrases;
-    
+
+    [Header("AI ISMCTS Debug Panels")]
+    // Live view of the search while Ben is choosing a move: root visits, nodes expanded,
+    // and a ranked table of the top candidate moves with visits/avgReward/avail so you can
+    // watch the tree converge in real time.
+    [SerializeField] private TextMeshProUGUI ismctsLiveStatsText;
+    // Snapshot taken once the decision is made: the chosen move's stats plus its closest
+    // runner-up, so you can see exactly why one move beat another.
+    [SerializeField] private TextMeshProUGUI ismctsDecisionText;
+    [SerializeField] private int ismctsTopMovesShown = 5;
+
     private GameManager _gm;
     private Deck _deck;
     private Coroutine _matchFlash;
 
     // ----------------------------------------------------------------------
     // AI action sign  —  fill actionPhrases[] in this exact order:
-    //   0  thinking
+    //   0  (unused — thinking is now shown via the ISMCTS panels, not a phrase)
     //   1  draw from deck        2  draw from discard
     //   3  discard drawn         4  swap drawn into hand
     //   5  attempt match         6  give a card
@@ -88,7 +103,7 @@ public class GameUI : MonoBehaviour
     //   11 call cambio
     // idlePhrases[] = flavour lines shown on the player's turn.
     // ----------------------------------------------------------------------
-    private const int A_THINKING            = 0;
+    private const int A_THINKING            = 0; // no longer used directly — kept so array indices below stay stable
     private const int A_DRAW_DECK           = 1;
     private const int A_DRAW_DISCARD        = 2;
     private const int A_DISCARD_DRAWN       = 3;
@@ -115,9 +130,11 @@ public class GameUI : MonoBehaviour
         _gm.OnGiveCardDone += HandleGiveCardDone;
         _gm.OnPenaltyAdded += HandlePenaltyAdded;
         _gm.OnCommandApplied += HandleCommandApplied;
+        _gm.OnAiSearchProgress += HandleAiSearchProgress;
+        _gm.OnAiSearchDecision += HandleAiSearchDecision;
 
         ShowIdle();
-        
+
         ResetPenaltyUI();
         SetImageAlpha(matchSlotImage, 0f);
 
@@ -139,6 +156,8 @@ public class GameUI : MonoBehaviour
         _gm.OnGiveCardDone -= HandleGiveCardDone;
         _gm.OnPenaltyAdded -= HandlePenaltyAdded;
         _gm.OnCommandApplied -= HandleCommandApplied;
+        _gm.OnAiSearchProgress -= HandleAiSearchProgress;
+        _gm.OnAiSearchDecision -= HandleAiSearchDecision;
     }
 
     // ----------------------------------------------------------------------
@@ -195,8 +214,9 @@ public class GameUI : MonoBehaviour
             case GamePhase.DrawingCard:
                 SetTurnLabel(isPlayerTurn);
                 RefreshDiscardDisplay();
-                if (isPlayerTurn) ShowIdle();         
-                else              SetAction(A_THINKING); 
+                if (isPlayerTurn) ShowIdle();
+                // else: no canned phrase here anymore — the ISMCTS live panel
+                // (ismctsLiveStatsText) shows what Ben is actually doing while he searches.
                 break;
 
             case GamePhase.CardDrawn:
@@ -288,6 +308,90 @@ public class GameUI : MonoBehaviour
             cards[index].sprite = _deck.CardBack;          // penalty cards stay face-down
             cards[index].gameObject.SetActive(true);
         }
+    }
+
+    // ----------------------------------------------------------------------
+    // ISMCTS debug panels
+    // ----------------------------------------------------------------------
+
+    /// <summary>Live, mid-search snapshot: fired repeatedly while Ben is thinking.</summary>
+    private void HandleAiSearchProgress(IsmctsReport report)
+    {
+        if (!ismctsLiveStatsText) return;
+        string header = $"Ben is thinking... {report.IterationsDone}/{report.IterationsTarget} iterations ({report.ElapsedMs} ms)";
+        ismctsLiveStatsText.text = FormatMoveTable(report, header);
+    }
+
+    /// <summary>Final snapshot: fired once, after the move has been chosen. Refreshes the
+    /// live panel with the completed table and fills the decision panel with the chosen
+    /// move vs. its closest runner-up.</summary>
+    private void HandleAiSearchDecision(IsmctsReport report)
+    {
+        if (ismctsLiveStatsText)
+        {
+            string header = $"Search complete: {report.IterationsDone} iterations in {report.ElapsedMs} ms";
+            ismctsLiveStatsText.text = FormatMoveTable(report, header);
+        }
+
+        if (!ismctsDecisionText) return;
+
+        MoveStat chosen = default;
+        MoveStat runnerUp = default;
+        bool hasChosen = false, hasRunnerUp = false;
+
+        // Moves is sorted by visits descending; pick out the flagged chosen row and the
+        // highest-visit row that isn't it, wherever each happens to sit in the ranking.
+        foreach (var m in report.Moves)
+        {
+            if (m.IsChosen && !hasChosen) { chosen = m; hasChosen = true; continue; }
+            if (!hasRunnerUp) { runnerUp = m; hasRunnerUp = true; }
+        }
+
+        var sb = new System.Text.StringBuilder();
+
+        if (hasChosen)
+        {
+            sb.AppendLine($"Chosen move: {chosen.Move}");
+            sb.AppendLine($"  visits = {chosen.Visits}");
+            sb.AppendLine($"  avg reward = {chosen.AvgReward:F3}");
+            sb.AppendLine($"  avail (times seen as a legal sibling) = {chosen.Avail}");
+        }
+        else
+        {
+            sb.AppendLine("Chosen move: (no search run — only one legal move)");
+        }
+
+        if (hasRunnerUp)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Runner-up: {runnerUp.Move}");
+            sb.AppendLine($"  visits = {runnerUp.Visits}   (Δ {chosen.Visits - runnerUp.Visits})");
+            sb.AppendLine($"  avg reward = {runnerUp.AvgReward:F3}   (Δ {(chosen.AvgReward - runnerUp.AvgReward):F3})");
+        }
+
+        ismctsDecisionText.text = sb.ToString();
+    }
+
+    /// <summary>Renders the header line + a ranked table of the top N root moves. Shared by
+    /// both the live progress panel and the "search complete" refresh of that same panel.</summary>
+    private string FormatMoveTable(IsmctsReport report, string header)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(header);
+        sb.AppendLine($"root visits = {report.RootVisits}   nodes expanded = {report.NodesExpanded}");
+        sb.AppendLine($"root moves explored = {report.ExpandedRootMoves}/{report.LegalCount}");
+        sb.AppendLine();
+
+        int shown = 0;
+        foreach (var m in report.Moves)
+        {
+            if (shown >= ismctsTopMovesShown) break;
+            shown++;
+            string mark = m.IsChosen ? "  <== CHOSEN" : "";
+            sb.AppendLine($"{m.Move,-28} v={m.Visits,4}  avgR={m.AvgReward:F3}  avail={m.Avail}{mark}");
+        }
+
+        return sb.ToString();
     }
 
     // ----------------------------------------------------------------------
@@ -448,7 +552,7 @@ public class GameUI : MonoBehaviour
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
-    
+
     private void SetAction(int index)
     {
         if (!actionText || actionPhrases == null) return;

@@ -125,6 +125,8 @@ public class GameState
     public Card TopDiscard => _discard.Count > 0 ? _discard[^1] : Card.None;
     public int DrawPileCount => _drawPile.Count;
     public int DiscardCount => _discard.Count;
+    
+    public static int OpponentOf(int side) => side == PlayerSide ? AISide : PlayerSide;
 
     // Construction
     /// <param name="shuffledIds">A pre-shuffled ordering of every physical card id.</param>
@@ -297,20 +299,6 @@ public class GameState
                 }
                 break;
             
-            case GamePhase.SelectingSwapSlot:
-                if (_phase == GamePhase.CardDrawn)
-                {
-                    moves.Add(GameCommand.DiscardDrawn());
-                }
-
-                foreach (var s in ActiveSlotsOf(ActiveSide))
-                {
-                    // All available slots can be swaped with
-                    moves.Add(GameCommand.SwapDrawnInto(s));
-                }
-                
-                break;
-
             case GamePhase.UsingPower:
                 if (_awaitingPeekConfirm)
                 {
@@ -322,14 +310,19 @@ public class GameState
                 switch (_powerStep)
                 {
                     case PowerStep.LookingOwn:
-                        // None
+                        foreach (var s in ActiveSlotsOf(ActiveSide))
+                        {
+                            moves.Add(GameCommand.UsePowerOn(s));   
+                        }
                         break;
+                    
                     case PowerStep.SelectingPowerSwapSource:
                         foreach (var s in ActiveSlotsOf(ActiveSide))
                         {
                             moves.Add(GameCommand.UsePowerOn(s));
                         }
                         break;
+                    
                     case PowerStep.SelectingTradeOwn:
                         foreach (var s in ActiveSlotsOf(ActiveSide))
                         {
@@ -337,18 +330,26 @@ public class GameState
                             moves.Add(GameCommand.UsePowerOn(s));
                         }
                         break;
+                    
                     case PowerStep.LookingOpponent:
-                        // None
+                        foreach (var s in ActiveSlotsOf(OpponentSide))
+                        {
+                            moves.Add(GameCommand.UsePowerOn(s));
+                        }
+
                         break;
+                    
                     case PowerStep.SelectingPowerSwapTarget:
-                        foreach (var s in ActiveSlotsOf(ActiveSide))
+                        foreach (var s in ActiveSlotsOf(OpponentSide))
                         {
                             moves.Add(GameCommand.UsePowerOn(s));
                         }
                         break;
+                    
                     case PowerStep.SelectingTradeOpponent:
                         foreach (var s in ActiveSlotsOf(OpponentSide)) moves.Add(GameCommand.UsePowerOn(s));
                         break;
+                    
                     case PowerStep.ConfirmingTrade:
                         moves.Add(GameCommand.ConfirmTrade());
                         break;
@@ -358,7 +359,7 @@ public class GameState
         return moves;
     }
 
-    private bool CanDraw() => _drawPile.Count > 0 || _discard.Count > 1;
+    private bool CanDraw() => _drawPile.Count > 0;
 
 
     // Apply is what Ai and player input calls, it does a do per possible actions and only executes the valid ones
@@ -642,6 +643,12 @@ public class GameState
 
         _isPlayerTurn = !_isPlayerTurn;
         _phase = GamePhase.DrawingCard;
+        
+        if (_drawPile.Count == 0 && _isPlayerTurn)
+        {
+            _phase = GamePhase.GameOver;
+            fx.Add(new GameEffect { Kind = EffectKind.GameOver });
+        }
     }
 
     private void SwapSlots(SlotRef a, SlotRef b, List<GameEffect> fx)
@@ -690,20 +697,7 @@ public class GameState
         return c;
     }
 
-    private Card DrawCard()
-    {
-        if (_drawPile.Count == 0)
-        {
-            if (_discard.Count <= 1) return Card.None;
-            // Keep the top discard; shuffle the rest back into the draw pile.
-            Card top = _discard[_discard.Count - 1];
-            for (int i = 0; i < _discard.Count - 1; i++) _drawPile.Add(_discard[i]);
-            _discard.Clear();
-            _discard.Add(top);
-            Shuffle(_drawPile);
-        }
-        return DrawNoReshuffle();
-    }
+    private Card DrawCard() => DrawNoReshuffle();
 
     private Card DrawFromDiscard()
     {
@@ -717,16 +711,7 @@ public class GameState
     {
         if (!c.IsNone) _discard.Add(c);
     }
-
-    private void Shuffle(List<Card> list)
-    {
-        for (int i = list.Count - 1; i > 0; i--)
-        {
-            int j = _rng.Next(i + 1);
-            (list[i], list[j]) = (list[j], list[i]);
-        }
-    }
-
+    
     public List<int> UnseenCardIds(ICollection<int> knowIds)
     {
         var cardsUsed = new HashSet<int>(knowIds);
@@ -754,12 +739,11 @@ public class GameState
     public void SetDrawPile(IReadOnlyList<int> orderIds)
     {
         _drawPile.Clear();
-
         
         
         for (var i = 0; i < orderIds.Count; i++)
         {
-            _discard.Add(new Card(i));
+            _drawPile.Add(new Card(orderIds[i]));
         }
     }
     public void OverwriteHidden(IReadOnlyList<SlotRef> slotRefs, IReadOnlyList<int> cardIds)
