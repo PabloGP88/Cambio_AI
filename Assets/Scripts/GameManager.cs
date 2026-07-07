@@ -51,7 +51,6 @@ public class GameManager : MonoBehaviour
     public event Action<CommandType, bool> OnCommandApplied;
 
     // --- AI search reporting (drives the ISMCTS debug panels in GameUI) ---
-    public event Action<IsmctsReport> OnAiSearchProgress;  // periodic, mid-search snapshots
     public event Action<IsmctsReport> OnAiSearchDecision;  // once, when a move has been chosen
 
     private void Awake()
@@ -73,7 +72,6 @@ public class GameManager : MonoBehaviour
         InitSlotViews(aiPenaltySlots, GameState.AISide, Zone.Penalty);
 
         _ai = new AICambioAgent(seed);
-        _ai.OnSearchProgress += HandleAiSearchProgress;
         _ai.OnSearchDecision += HandleAiSearchDecision;
         _ai.OnNewGame(GameState.AISide, State);
 
@@ -252,10 +250,9 @@ public class GameManager : MonoBehaviour
         p == GamePhase.DrawingCard || p == GamePhase.CardDrawn ||
         p == GamePhase.SelectingSwapSlot || p == GamePhase.UsingPower;
 
-    /// <summary>Drives the AI's decision as a coroutine instead of one blocking call, so a
-    /// multi-thousand-iteration ISMCTS search can yield between chunks and the live stats
-    /// panels in GameUI actually update while Ben "thinks" instead of freezing then
-    /// popping the final answer.</summary>
+    /// <summary>Drives the AI's decision as a coroutine. The search itself runs in one
+    /// shot (no mid-search reporting), so this mainly exists to keep the IAgent contract
+    /// uniform and to let aiThinkSeconds pace the reveal after the move is decided.</summary>
     private IEnumerator RunAiTurn()
     {
         GameCommand chosen = default;
@@ -271,6 +268,5 @@ public class GameManager : MonoBehaviour
         SubmitAI(chosen);
     }
 
-    private void HandleAiSearchProgress(IsmctsReport report) => OnAiSearchProgress?.Invoke(report);
     private void HandleAiSearchDecision(IsmctsReport report) => OnAiSearchDecision?.Invoke(report);
 }

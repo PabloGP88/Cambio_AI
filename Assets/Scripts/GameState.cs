@@ -29,11 +29,11 @@ public enum PowerStep
 /// <summary>Observable consequence of applying a command. Drives view events + AI observation.</summary>
 public enum EffectKind
 {
-    CardDrawn,           // Side = drawer, Card = drawn card, Bool1 = actorIsPlayer
-    SlotRevealed,        // Slot (Side/Index/Zone), Card, Bool1 = actorIsPlayer (who learned it)
-    MatchResolved,       // Slot, Card, Bool1 = success, Bool2 = byPlayer
-    PenaltyAdded,        // Slot (the new penalty slot), Card, Bool1 = forPlayer
-    SlotsSwapped,        // Slot = a, Slot2 = b
+    CardDrawn,           // Slot = drawer's hand (index -1), Card = drawn card, Success = actorIsPlayer
+    SlotRevealed,        // Slot, Card, Success = actorIsPlayer (who learned it)
+    MatchResolved,       // Slot, Card, Success = matched, ByPlayer
+    PenaltyAdded,        // Slot = new penalty slot, Card, Success = forPlayer
+    SlotsSwapped,        // Slot = a, Slot2 = b (Slot2 = None for a one-slot change)
     GiveDone,
     InformedTradeReady,  // Card = opponent card, Card2 = own card
     GameOver
@@ -57,56 +57,50 @@ public struct MoveResult
     public static MoveResult Fail() => new MoveResult { Ok = false, Effects = null };
 }
 
-// Game State is the entire game in variables, it has public read methods so the AI and player input can act accordingly
+/// <summary>
+/// The full game as data plus the rules that mutate it. Everything the AI and PlayerInput
+/// need is exposed through public read-only queries so neither can see hidden card values.
+/// Apply() is the single mutation path; it returns the observable effects of the command.
+/// </summary>
 public class GameState
 {
     public const int PlayerSide = 0;
     public const int AISide = 1;
-    
-    public int HandSize
-    {
-        get; 
-        private set;
-    }
 
-    public int PenaltySize
-    {
-        get; 
-        private set;
-    }
+    public int HandSize { get; private set; }
+    public int PenaltySize { get; private set; }
 
-    // The game, the layout
-    private Card[][] _hand;       // [side][index]
-    private Card[][] _penalty;    // [side][index]
-    private List<Card> _drawPile; // end of list = top of deck
-    private List<Card> _discard;  // end of list = top of discard
+    // Layout
+    private Card[][] _hand;        // [side][index]
+    private Card[][] _penalty;     // [side][index]
+    private List<Card> _drawPile;  // end of list = top of deck
+    private List<Card> _discard;   // end of list = top of discard
 
-    // The current state of the game
+    // Current state
     private GamePhase _phase;
     private PowerStep _powerStep;
     private bool _isPlayerTurn;
-    private Card _drawn; // card just picked up
-    private CardPower _activePower; // if there's a power, which one is currently being used
+    private Card _drawn;             // card just picked up
+    private CardPower _activePower;  // power currently being resolved, if any
 
-    
-    // Endgame to set final turn
+    // Endgame
     private bool _cambioCalled;
     private int _cambioCallerSide;
     private int _finalRoundTurnsLeft;
-    
-    // flags
+
+    // Per-turn flags
     private bool _matchedThisTurn;
     private bool _awaitingGiveCard;
-    private SlotRef _matchReceiver;     // opponent slot to be filled by the giver
-    private bool _awaitingPeekConfirm;  // a look-power peeked; only FinishPeeking is legal now
-    
+    private SlotRef _matchReceiver;      // opponent slot the giver must fill
+    private bool _awaitingPeekConfirm;   // a look-power peeked; only FinishPeeking is legal now
+
     private SlotRef _powerSource;
     private SlotRef _tradeOpponent;
     private SlotRef _tradeOwn;
 
-    private Random _rng; // have random shuffle each time
+    private Random _rng;
 
-    // Public reads for the AI and the PLayerInput, this is so they dont know the actual value of the cards
+    // Public reads
     public GamePhase Phase => _phase;
     public PowerStep PowerStep => _powerStep;
     public bool IsPlayerTurn => _isPlayerTurn;
@@ -125,14 +119,10 @@ public class GameState
     public Card TopDiscard => _discard.Count > 0 ? _discard[^1] : Card.None;
     public int DrawPileCount => _drawPile.Count;
     public int DiscardCount => _discard.Count;
-    
+
     public static int OpponentOf(int side) => side == PlayerSide ? AISide : PlayerSide;
 
-    // Construction
     /// <param name="shuffledIds">A pre-shuffled ordering of every physical card id.</param>
-    /// <param name="handSize"></param>
-    /// <param name="penaltySize"></param>
-    /// <param name="seed"></param>
     public GameState(IReadOnlyList<int> shuffledIds, int handSize, int penaltySize, int seed)
     {
         HandSize = handSize;
@@ -140,30 +130,14 @@ public class GameState
         _rng = new Random(seed);
 
         _drawPile = new List<Card>(shuffledIds.Count);
-        
-        foreach (var id in shuffledIds)
-        {
-            // Create draw pile
-            _drawPile.Add(new Card(id));
-        }
-        // Empty discard
+        foreach (var id in shuffledIds) _drawPile.Add(new Card(id));
         _discard = new List<Card>();
 
-        _hand = new[]
-        {
-            NewSlots(handSize),
-            NewSlots(handSize)
-        };
-        _penalty = new[]
-        {
-            NewSlots(penaltySize),
-            NewSlots(penaltySize)
-        };
+        _hand = new[] { NewSlots(handSize), NewSlots(handSize) };
+        _penalty = new[] { NewSlots(penaltySize), NewSlots(penaltySize) };
 
-        // Deal 
         for (var i = 0; i < handSize; i++) _hand[PlayerSide][i] = DrawNoReshuffle();
         for (var i = 0; i < handSize; i++) _hand[AISide][i] = DrawNoReshuffle();
-        
         // penalties start empty (None)
 
         _phase = GamePhase.Dealing;
@@ -185,7 +159,6 @@ public class GameState
         return a;
     }
 
-    // Always start play is players turn
     public void StartPlay()
     {
         if (_phase != GamePhase.Dealing) return;
@@ -193,11 +166,10 @@ public class GameState
         _isPlayerTurn = true;
     }
 
-
     /// <summary>Deep copy for search. Pass a fresh seed so determinizations diverge.</summary>
     public GameState Clone(int seed)
     {
-        var game = new GameState
+        return new GameState
         {
             HandSize = HandSize,
             PenaltySize = PenaltySize,
@@ -222,8 +194,6 @@ public class GameState
             _tradeOwn = _tradeOwn,
             _rng = new Random(seed)
         };
-        
-        return game;
     }
 
     // Slot access
@@ -231,9 +201,7 @@ public class GameState
     {
         if (slotRef.IsNone) return Card.None;
         var cards = slotRef.Zone == Zone.Hand ? _hand[slotRef.Side] : _penalty[slotRef.Side];
-        
         if (slotRef.Index < 0 || slotRef.Index >= cards.Length) return Card.None;
-        
         return cards[slotRef.Index];
     }
 
@@ -246,10 +214,8 @@ public class GameState
     /// <summary>A slot is "active" iff it currently holds a card.</summary>
     public bool IsActive(SlotRef s) => !GetCard(s).IsNone;
 
-    /// <summary>the full discard pile every id.</summary>
     public List<Card> DiscardPile => _discard;
 
-    // This method is really importat since this is where the address is generated, it uses yield retunr so whenever its called it remmeebrs its last state
     private IEnumerable<SlotRef> ActiveSlotsOf(int side)
     {
         for (int i = 0; i < _hand[side].Length; i++)
@@ -258,15 +224,14 @@ public class GameState
             if (!_penalty[side][i].IsNone) yield return new SlotRef(side, Zone.Penalty, i);
     }
 
-    
-    public IEnumerable<SlotRef> GetActiveSlots(int side) => ActiveSlotsOf(side); // Required so the AI can see active slots
-    // Legal moves — the action space the AI picks from
+    public IEnumerable<SlotRef> GetActiveSlots(int side) => ActiveSlotsOf(side);
+
+    /// <summary>The action space the AI and PlayerInput pick from, for the current phase.</summary>
     public List<GameCommand> LegalMoves()
     {
         var moves = new List<GameCommand>();
         if (_phase == GamePhase.GameOver || _phase == GamePhase.Dealing) return moves;
 
-        // to determine legal moves for each possible game phase
         switch (_phase)
         {
             case GamePhase.DrawingCard:
@@ -282,8 +247,7 @@ public class GameState
                     if (!_cambioCalled) moves.Add(GameCommand.CallCambio());
                     if (!_matchedThisTurn && _discard.Count > 0)
                     {
-                        // Option to match all available cards from the player or AI
-                        
+                        // Snap: any active card (either side) may be matched to the top discard.
                         foreach (var s in ActiveSlotsOf(PlayerSide)) moves.Add(GameCommand.Match(s));
                         foreach (var s in ActiveSlotsOf(AISide)) moves.Add(GameCommand.Match(s));
                     }
@@ -291,65 +255,34 @@ public class GameState
                 break;
 
             case GamePhase.CardDrawn:
-                
                 moves.Add(GameCommand.DiscardDrawn());
                 foreach (var s in ActiveSlotsOf(ActiveSide))
-                {
                     moves.Add(GameCommand.SwapDrawnInto(s));
-                }
                 break;
-            
+
             case GamePhase.UsingPower:
                 if (_awaitingPeekConfirm)
                 {
                     moves.Add(GameCommand.FinishPeeking());
                     break;
                 }
-                
-                // Internal switch for each power in _powerStep
+
                 switch (_powerStep)
                 {
                     case PowerStep.LookingOwn:
-                        foreach (var s in ActiveSlotsOf(ActiveSide))
-                        {
-                            moves.Add(GameCommand.UsePowerOn(s));   
-                        }
-                        break;
-                    
                     case PowerStep.SelectingPowerSwapSource:
-                        foreach (var s in ActiveSlotsOf(ActiveSide))
-                        {
-                            moves.Add(GameCommand.UsePowerOn(s));
-                        }
-                        break;
-                    
                     case PowerStep.SelectingTradeOwn:
                         foreach (var s in ActiveSlotsOf(ActiveSide))
-                        {
-                            // Setting all available cards as targets for the power
                             moves.Add(GameCommand.UsePowerOn(s));
-                        }
                         break;
-                    
-                    case PowerStep.LookingOpponent:
-                        foreach (var s in ActiveSlotsOf(OpponentSide))
-                        {
-                            moves.Add(GameCommand.UsePowerOn(s));
-                        }
 
-                        break;
-                    
+                    case PowerStep.LookingOpponent:
                     case PowerStep.SelectingPowerSwapTarget:
-                        foreach (var s in ActiveSlotsOf(OpponentSide))
-                        {
-                            moves.Add(GameCommand.UsePowerOn(s));
-                        }
-                        break;
-                    
                     case PowerStep.SelectingTradeOpponent:
-                        foreach (var s in ActiveSlotsOf(OpponentSide)) moves.Add(GameCommand.UsePowerOn(s));
+                        foreach (var s in ActiveSlotsOf(OpponentSide))
+                            moves.Add(GameCommand.UsePowerOn(s));
                         break;
-                    
+
                     case PowerStep.ConfirmingTrade:
                         moves.Add(GameCommand.ConfirmTrade());
                         break;
@@ -361,8 +294,8 @@ public class GameState
 
     private bool CanDraw() => _drawPile.Count > 0;
 
-
-    // Apply is what Ai and player input calls, it does a do per possible actions and only executes the valid ones
+    /// <summary>The single mutation path. Dispatches to the matching Do*, which validates
+    /// and either applies (returning true + effects) or rejects (returning false).</summary>
     public MoveResult Apply(GameCommand cmd)
     {
         var fx = new List<GameEffect>();
@@ -380,31 +313,26 @@ public class GameState
             CommandType.CallCambio        => DoCallCambio(fx),
             _ => false
         };
-        return new MoveResult
-        {
-            Ok = ok,
-            Effects = fx 
-        };
+        return new MoveResult { Ok = ok, Effects = fx };
     }
 
     private bool DoDraw(bool fromDiscard, List<GameEffect> fx)
     {
         if (_phase != GamePhase.DrawingCard || _awaitingGiveCard) return false;
-        
+
         Card card = fromDiscard ? DrawFromDiscard() : DrawCard();
         if (card.IsNone) return false;
-        
+
         _drawn = card;
         _phase = GamePhase.CardDrawn;
-        
+
         fx.Add(new GameEffect
         {
-            Kind = EffectKind.CardDrawn, 
+            Kind = EffectKind.CardDrawn,
             Slot = new SlotRef(ActiveSide, Zone.Hand, -1),
-            Card = card, 
+            Card = card,
             Success = _isPlayerTurn
         });
-        
         return true;
     }
 
@@ -412,22 +340,22 @@ public class GameState
     {
         if (_phase != GamePhase.CardDrawn || _drawn.IsNone) return false;
 
-
+        // Discarding a card whose rank matches the top discard counts as a match: no power, end turn.
         Card top = TopDiscard;
         if (!top.IsNone && _drawn.Number == top.Number)
         {
             Card matched = _drawn;
             Discard(matched);
             _drawn = Card.None;
-            _activePower = CardPower.None;          // matched cards never fire a power
+            _activePower = CardPower.None;
 
             fx.Add(new GameEffect
             {
-                Kind  = EffectKind.MatchResolved,
-                Slot  = SlotRef.None,               // the drawn card lives in no slot
-                Card  = matched,
-                Success = true,                        // success
-                ByPlayer = _isPlayerTurn                // byPlayer
+                Kind = EffectKind.MatchResolved,
+                Slot = SlotRef.None,       // the drawn card lives in no slot
+                Card = matched,
+                Success = true,
+                ByPlayer = _isPlayerTurn
             });
 
             EndTurn(fx);
@@ -450,19 +378,19 @@ public class GameState
 
         Card displaced = GetCard(s);
         Card placed = _drawn;
-        
+
         SetCard(s, _drawn);
         Discard(displaced);
         _drawn = Card.None;
-        
+
         fx.Add(new GameEffect
         {
-            Kind  = EffectKind.SlotsSwapped,
-            Slot  = s,
+            Kind = EffectKind.SlotsSwapped,
+            Slot = s,
             Slot2 = SlotRef.None,
-            Card = placed,
+            Card = placed
         });
-        
+
         EndTurn(fx);
         return true;
     }
@@ -534,8 +462,8 @@ public class GameState
 
         if (!success)
         {
-            // Faithful to original: failed match just adds a penalty; the turn's
-            // match flag is NOT consumed, so another attempt is technically legal.
+            // Failed match just adds a penalty; the match flag is NOT consumed, so another
+            // attempt is technically still legal this turn.
             ApplyPenalty(ActiveSide, fx);
             fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Success = false, ByPlayer = _isPlayerTurn });
             return true;
@@ -643,7 +571,9 @@ public class GameState
 
         _isPlayerTurn = !_isPlayerTurn;
         _phase = GamePhase.DrawingCard;
-        
+
+        // End on an empty draw pile only before the player's turn, so both sides get the
+        // same number of turns (the player always moves first). Not a reshuffle.
         if (_drawPile.Count == 0 && _isPlayerTurn)
         {
             _phase = GamePhase.GameOver;
@@ -687,8 +617,8 @@ public class GameState
         Success = _isPlayerTurn // the active side is the one learning the card
     };
 
-    // Deck plumbing (with discard reshuffle — fixes the null-draw crash)
-
+    // Deck plumbing. There is currently no reshuffle: an empty pile is handled by the
+    // legal-move gates (CanDraw) and the end-of-turn terminal check in EndTurn.
     private Card DrawNoReshuffle()
     {
         if (_drawPile.Count == 0) return Card.None;
@@ -711,49 +641,36 @@ public class GameState
     {
         if (!c.IsNone) _discard.Add(c);
     }
-    
+
+    // Determinization support (used by the AI search)
+
+    /// <summary>All card ids not known, not in the discard, and not the currently drawn card
+    /// — i.e. the pool the AI may sample hidden slots and the draw pile from.</summary>
     public List<int> UnseenCardIds(ICollection<int> knowIds)
     {
         var cardsUsed = new HashSet<int>(knowIds);
-        
-        foreach (var cardId in _discard)
-        {
-            cardsUsed.Add(cardId.Id);
-        }
-        
+        foreach (var cardId in _discard) cardsUsed.Add(cardId.Id);
         if (!_drawn.IsNone) cardsUsed.Add(_drawn.Id);
-        
-        var result =  new List<int>(Card.DeckSize);
-        for (var i = 0; i < Card.DeckSize; i++) 
-        {
-            if (!cardsUsed.Contains(i))
-            {
-                result.Add(i);
-            }
-        }
-        
+
+        var result = new List<int>(Card.DeckSize);
+        for (var i = 0; i < Card.DeckSize; i++)
+            if (!cardsUsed.Contains(i)) result.Add(i);
         return result;
     }
-
 
     public void SetDrawPile(IReadOnlyList<int> orderIds)
     {
         _drawPile.Clear();
-        
-        
         for (var i = 0; i < orderIds.Count; i++)
-        {
             _drawPile.Add(new Card(orderIds[i]));
-        }
     }
+
     public void OverwriteHidden(IReadOnlyList<SlotRef> slotRefs, IReadOnlyList<int> cardIds)
     {
         for (var i = 0; i < slotRefs.Count; i++)
-        {
             SetCard(slotRefs[i], new Card(cardIds[i]));
-        }
     }
-    
+
     // Scoring / queries
     public int Score(int side)
     {
@@ -769,8 +686,8 @@ public class GameState
         if (a < p) return AISide;
         return -1; // draw
     }
-    
-    // DEBUG
+
+    /// <summary>Sanity check for determinization: every card id present exactly once.</summary>
     public bool IsCardSetWorking()
     {
         var seen = new HashSet<int>();
@@ -783,14 +700,13 @@ public class GameState
 
         foreach (var side in new[] { PlayerSide, AISide })
         {
-            foreach (var c in _hand[side])    Mark(c);
+            foreach (var c in _hand[side]) Mark(c);
             foreach (var c in _penalty[side]) Mark(c);
         }
         foreach (var c in _drawPile) Mark(c);
-        foreach (var c in _discard)  Mark(c);
+        foreach (var c in _discard) Mark(c);
         Mark(_drawn);
 
         return ok && seen.Count == Card.DeckSize;
     }
-    
 }

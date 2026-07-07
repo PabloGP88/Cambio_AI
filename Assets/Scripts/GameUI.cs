@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -15,10 +16,11 @@ using UnityEngine.UI;
 ///   - events now carry Card structs / int side+index instead of CardSlot objects
 ///   - actions route through GameManager.Player.PressX()
 ///
-/// AI "thinking" is no longer a canned phrase picked from an array. GameManager now runs
-/// the AI's search as a coroutine and forwards structured IsmctsReport snapshots via
-/// OnAiSearchProgress (live, mid-search) and OnAiSearchDecision (final, once chosen).
-/// Those drive the two ismcts*Text panels below.
+/// AI "thinking" is no longer a canned phrase picked from an array. GameManager runs the
+/// AI's search and forwards a single structured IsmctsReport via OnAiSearchDecision once
+/// the move is chosen. That drives two panels: ismctsRunStatsText (iterations, elapsed
+/// time, how much of the tree got explored) and ismctsDecisionText (the chosen move's
+/// visits/reward vs. its closest runner-up).
 /// </summary>
 public class GameUI : MonoBehaviour
 {
@@ -73,48 +75,19 @@ public class GameUI : MonoBehaviour
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TextMeshProUGUI gameOverText;
 
-    [Header("Action AI Sign")]
-    [SerializeField] private TextMeshProUGUI actionText;
-    [SerializeField] private string[] idlePhrases;
-    [SerializeField] private string[] actionPhrases;
-
     [Header("AI ISMCTS Debug Panels")]
-    // Live view of the search while Ben is choosing a move: root visits, nodes expanded,
-    // and a ranked table of the top candidate moves with visits/avgReward/avail so you can
-    // watch the tree converge in real time.
-    [SerializeField] private TextMeshProUGUI ismctsLiveStatsText;
-    // Snapshot taken once the decision is made: the chosen move's stats plus its closest
-    // runner-up, so you can see exactly why one move beat another.
+    // Aggregate stats for the search that just ran: iterations, elapsed time, root visits,
+    // nodes expanded, how many of the legal root moves actually got explored. This is the
+    // "what is the AI running with" panel — it updates once per decision, not live.
+    [SerializeField] private TextMeshProUGUI ismctsRunStatsText;
+    // The chosen move's stats plus its closest runner-up, so you can see exactly why one
+    // move beat another (visits, avg reward, avail).
     [SerializeField] private TextMeshProUGUI ismctsDecisionText;
-    [SerializeField] private int ismctsTopMovesShown = 5;
 
     private GameManager _gm;
     private Deck _deck;
     private Coroutine _matchFlash;
 
-    // ----------------------------------------------------------------------
-    // AI action sign  —  fill actionPhrases[] in this exact order:
-    //   0  (unused — thinking is now shown via the ISMCTS panels, not a phrase)
-    //   1  draw from deck        2  draw from discard
-    //   3  discard drawn         4  swap drawn into hand
-    //   5  attempt match         6  give a card
-    //   7  power: look own       8  power: look opponent
-    //   9  power: blind swap     10 power: look & swap (trade)
-    //   11 call cambio
-    // idlePhrases[] = flavour lines shown on the player's turn.
-    // ----------------------------------------------------------------------
-    private const int A_THINKING            = 0; // no longer used directly — kept so array indices below stay stable
-    private const int A_DRAW_DECK           = 1;
-    private const int A_DRAW_DISCARD        = 2;
-    private const int A_DISCARD_DRAWN       = 3;
-    private const int A_SWAP_DRAWN          = 4;
-    private const int A_MATCH               = 5;
-    private const int A_GIVE                = 6;
-    private const int A_POWER_LOOK_OWN      = 7;
-    private const int A_POWER_LOOK_OPP      = 8;
-    private const int A_POWER_BLIND_SWAP    = 9;
-    private const int A_POWER_LOOK_AND_SWAP = 10;
-    private const int A_CAMBIO              = 11;
     void Start()
     {
         _gm = GameManager.Instance;
@@ -129,11 +102,7 @@ public class GameUI : MonoBehaviour
         _gm.OnAwaitingGiveCard += HandleAwaitingGiveCard;
         _gm.OnGiveCardDone += HandleGiveCardDone;
         _gm.OnPenaltyAdded += HandlePenaltyAdded;
-        _gm.OnCommandApplied += HandleCommandApplied;
-        _gm.OnAiSearchProgress += HandleAiSearchProgress;
         _gm.OnAiSearchDecision += HandleAiSearchDecision;
-
-        ShowIdle();
 
         ResetPenaltyUI();
         SetImageAlpha(matchSlotImage, 0f);
@@ -141,6 +110,14 @@ public class GameUI : MonoBehaviour
         // If GameManager.Start already ran, State exists and we can show the peek now.
         // If it hasn't, we'll catch the Dealing OnPhaseChanged event below instead.
         if (_gm.State != null) ShowInitialPeek();
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            RestartGame();
+        }
     }
 
     void OnDestroy()
@@ -155,8 +132,6 @@ public class GameUI : MonoBehaviour
         _gm.OnAwaitingGiveCard -= HandleAwaitingGiveCard;
         _gm.OnGiveCardDone -= HandleGiveCardDone;
         _gm.OnPenaltyAdded -= HandlePenaltyAdded;
-        _gm.OnCommandApplied -= HandleCommandApplied;
-        _gm.OnAiSearchProgress -= HandleAiSearchProgress;
         _gm.OnAiSearchDecision -= HandleAiSearchDecision;
     }
 
@@ -214,9 +189,6 @@ public class GameUI : MonoBehaviour
             case GamePhase.DrawingCard:
                 SetTurnLabel(isPlayerTurn);
                 RefreshDiscardDisplay();
-                if (isPlayerTurn) ShowIdle();
-                // else: no canned phrase here anymore — the ISMCTS live panel
-                // (ismctsLiveStatsText) shows what Ben is actually doing while he searches.
                 break;
 
             case GamePhase.CardDrawn:
@@ -232,11 +204,6 @@ public class GameUI : MonoBehaviour
             case GamePhase.UsingPower:
                 if (isPlayerTurn)
                     ShowPowerPrompt();
-                else
-                {
-                    int p = PowerActionIndex(_gm.State.ActivePower);
-                    if (p >= 0) SetAction(p);
-                }
                 break;
 
             case GamePhase.GameOver:
@@ -314,24 +281,13 @@ public class GameUI : MonoBehaviour
     // ISMCTS debug panels
     // ----------------------------------------------------------------------
 
-    /// <summary>Live, mid-search snapshot: fired repeatedly while Ben is thinking.</summary>
-    private void HandleAiSearchProgress(IsmctsReport report)
-    {
-        if (!ismctsLiveStatsText) return;
-        string header = $"Ben is thinking... {report.IterationsDone}/{report.IterationsTarget} iterations ({report.ElapsedMs} ms)";
-        ismctsLiveStatsText.text = FormatMoveTable(report, header);
-    }
-
-    /// <summary>Final snapshot: fired once, after the move has been chosen. Refreshes the
-    /// live panel with the completed table and fills the decision panel with the chosen
-    /// move vs. its closest runner-up.</summary>
+    /// <summary>Fired once per AI decision. Fills the run-stats panel (iterations,
+    /// elapsed time, how much of the tree got explored) and the decision panel (chosen
+    /// move vs. its closest runner-up).</summary>
     private void HandleAiSearchDecision(IsmctsReport report)
     {
-        if (ismctsLiveStatsText)
-        {
-            string header = $"Search complete: {report.IterationsDone} iterations in {report.ElapsedMs} ms";
-            ismctsLiveStatsText.text = FormatMoveTable(report, header);
-        }
+        if (ismctsRunStatsText)
+            ismctsRunStatsText.text = FormatRunStats(report);
 
         if (!ismctsDecisionText) return;
 
@@ -372,25 +328,17 @@ public class GameUI : MonoBehaviour
         ismctsDecisionText.text = sb.ToString();
     }
 
-    /// <summary>Renders the header line + a ranked table of the top N root moves. Shared by
-    /// both the live progress panel and the "search complete" refresh of that same panel.</summary>
-    private string FormatMoveTable(IsmctsReport report, string header)
+    /// <summary>Aggregate numbers for the search that just ran — what the AI is actually
+    /// running with, not a per-move breakdown (that's ismctsDecisionText's job).</summary>
+    private string FormatRunStats(IsmctsReport report)
     {
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine(header);
-        sb.AppendLine($"root visits = {report.RootVisits}   nodes expanded = {report.NodesExpanded}");
+        sb.AppendLine("ISMCTS search stats");
+        sb.AppendLine($"iterations = {report.IterationsDone}/{report.IterationsTarget}");
+        sb.AppendLine($"elapsed = {report.ElapsedMs} ms");
+        sb.AppendLine($"root visits = {report.RootVisits}");
+        sb.AppendLine($"nodes expanded = {report.NodesExpanded}");
         sb.AppendLine($"root moves explored = {report.ExpandedRootMoves}/{report.LegalCount}");
-        sb.AppendLine();
-
-        int shown = 0;
-        foreach (var m in report.Moves)
-        {
-            if (shown >= ismctsTopMovesShown) break;
-            shown++;
-            string mark = m.IsChosen ? "  <== CHOSEN" : "";
-            sb.AppendLine($"{m.Move,-28} v={m.Visits,4}  avgR={m.AvgReward:F3}  avail={m.Avail}{mark}");
-        }
-
         return sb.ToString();
     }
 
@@ -553,49 +501,4 @@ public class GameUI : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
-    private void SetAction(int index)
-    {
-        if (!actionText || actionPhrases == null) return;
-        if (index < 0 || index >= actionPhrases.Length) return;
-        actionText.text = actionPhrases[index];
-    }
-
-    private void ShowIdle()
-    {
-        if (actionText == null) return;
-        if (idlePhrases == null || idlePhrases.Length == 0) { actionText.text = ""; return; }
-        actionText.text = idlePhrases[Random.Range(0, idlePhrases.Length)];
-    }
-
-    private int PowerActionIndex(CardPower power) => power switch
-    {
-        CardPower.LookOwnCard      => A_POWER_LOOK_OWN,
-        CardPower.LookOpponentCard => A_POWER_LOOK_OPP,
-        CardPower.BlindSwap        => A_POWER_BLIND_SWAP,
-        CardPower.LookAndSwap      => A_POWER_LOOK_AND_SWAP,
-        _                          => -1
-    };
-
-    private void HandleCommandApplied(CommandType type, bool byPlayer)
-    {
-        if (byPlayer) return;   // the sign narrates Ben only
-
-        switch (type)
-        {
-            case CommandType.DrawFromDeck:      SetAction(A_DRAW_DECK);    break;
-            case CommandType.DrawFromDiscard:   SetAction(A_DRAW_DISCARD); break;
-
-            case CommandType.DiscardDrawn:
-                // If that discard triggered a power, the UsingPower phase shows it instead.
-                if (_gm.State.Phase != GamePhase.UsingPower) SetAction(A_DISCARD_DRAWN);
-                break;
-
-            case CommandType.SwapDrawnIntoSlot: SetAction(A_SWAP_DRAWN); break;
-            case CommandType.AttemptMatch:      SetAction(A_MATCH);      break;
-            case CommandType.GiveCard:          SetAction(A_GIVE);       break;
-            case CommandType.CallCambio:        SetAction(A_CAMBIO);     break;
-
-            // UsePowerOnSlot / ConfirmTrade / FinishPeeking: keep the current power text.
-        }
-    }
 }

@@ -10,20 +10,15 @@ public interface IAgent
     GameCommand ChooseMove(GameState publicState);
 
     /// <summary>
-    /// Same decision as ChooseMove, but spread across frames: yields periodically so a
-    /// caller (GameManager) can run it as a coroutine and let OnSearchProgress /
-    /// OnSearchDecision actually reach the screen mid-search instead of only after the
-    /// whole thing finishes. Calls onDecided exactly once, with the chosen command.
-    /// Agents with nothing incremental to show can just do:
+    /// Same decision as ChooseMove, but exposed as a coroutine so a caller (GameManager)
+    /// can run it and get OnSearchDecision once the search finishes. Calls onDecided
+    /// exactly once, with the chosen command. Agents with nothing else to do can just do:
     ///   onDecided(ChooseMove(state)); yield break;
     /// </summary>
     IEnumerator ChooseMoveRoutine(GameState publicState, Action<GameCommand> onDecided);
 
-    /// <summary>Fired periodically while a search is in progress (agents that don't run a
-    /// search can simply never fire this).</summary>
-    event Action<IsmctsReport> OnSearchProgress;
-
-    /// <summary>Fired once, with the final tree state including which move was chosen.</summary>
+    /// <summary>Fired once per decision, with the final tree state: which move was chosen,
+    /// its stats, and how it compares to the runner-up.</summary>
     event Action<IsmctsReport> OnSearchDecision;
 
     /// <summary>Observe an applied effect. Used to update beliefs. iAmActor = this agent caused it.</summary>
