@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI; 
 
 /// <summary>
 /// A slot is now a pure VIEW. It no longer owns a Card or any rules — it just knows its
@@ -39,12 +40,21 @@ public class CardSlot : MonoBehaviour, IPointerClickHandler
         if (GameManager.Instance != null)
             GameManager.Instance.Player.ClickSlot(Side, Zone, Index);
     }
-
-    // If you wire clicks via a UI Button or a custom collider instead of IPointerClickHandler,
-    // just call this from that handler:
+    
     public void OnClicked()
     {
         if (GameManager.Instance != null)
             GameManager.Instance.Player.ClickSlot(Side, Zone, Index);
+    }
+    
+    public void RevealFace(Sprite sprite)
+    {
+        var img = GetComponentInChildren<Image>(true);
+        if (img != null)
+        {
+            img.sprite = sprite;
+            return;
+        }
+        
     }
 }

@@ -269,4 +269,26 @@ public class GameManager : MonoBehaviour
     }
 
     private void HandleAiSearchDecision(IsmctsReport report) => OnAiSearchDecision?.Invoke(report);
+    
+    public void RevealAllHands()
+    {
+        if (State == null) return;
+    
+        RevealSideFaces(playerSlots, GameState.PlayerSide);
+        RevealSideFaces(aiSlots, GameState.AISide);
+    }
+
+    private void RevealSideFaces(CardSlot[] slots, int side)
+    {
+        if (slots == null) return;
+        
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] == null) continue;
+            
+            var s = new SlotRef(side, Zone.Hand, i);
+            if (!State.IsActive(s)) continue;
+            slots[i].RevealFace(deck.SpriteFor(State.GetCard(s)));
+        }
+    }
 }

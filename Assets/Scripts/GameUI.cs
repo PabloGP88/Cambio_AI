@@ -489,13 +489,35 @@ public class GameUI : MonoBehaviour
 
     private void ShowGameOver()
     {
+        RevealAllCardFaces(); 
+        
         int playerScore = _gm.GetScore(true);
         int aiScore = _gm.GetScore(false);
         string result = playerScore < aiScore ? "You win!" : playerScore > aiScore ? "Ben wins!" : "Draw!";
         gameOverText.text = $"{result}\nYou: {playerScore}  |  Ben: {aiScore}";
         gameOverPanel.SetActive(true);
+        
+        
     }
 
+    private void RevealAllCardFaces()
+    {
+        
+        _gm.RevealAllHands();
+        RevealPenaltyFaces(penaltyCardsPlayer, GameState.PlayerSide);
+        RevealPenaltyFaces(penaltyCardsAI, GameState.AISide);
+    }
+
+    private void RevealPenaltyFaces(Image[] cards, int side)
+    {
+        if (cards == null) return;
+        for (int i = 0; i < cards.Length; i++)
+        {
+            if (cards[i] == null || !cards[i].gameObject.activeSelf) continue;
+            Card c = _gm.State.GetCard(new SlotRef(side, Zone.Penalty, i));
+            if (!c.IsNone) cards[i].sprite = _deck.SpriteFor(c);
+        }
+    }
     public void RestartGame()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
