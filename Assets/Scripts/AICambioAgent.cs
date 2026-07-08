@@ -99,7 +99,7 @@ public class AICambioAgent : IAgent
     public int IterationsPerYield = 0;
 
     // Drop CallCambio from the root move set while we believe our own hand is still too high.
-    public int CambioGuardScore = 15;
+    public int CambioGuardScore = 10;
     public bool UseCambioGuard = true;
 
     // On a belief/pool inconsistency, skip that determinization instead of crashing the turn.
