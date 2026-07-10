@@ -473,6 +473,19 @@ public class AICambioAgent : IAgent
 
         UnityEngine.Debug.Log(sb.ToString());
     }
+    
+    public SlotRef SnapOwn(GameState pub)
+    {
+        Card top = pub.TopDiscard;
+        if (top.IsNone) return SlotRef.None;
+        foreach (var kv in _beliefs.Known)
+        {
+            if (kv.Key.Side != _mySide) continue;
+            if (!pub.IsActive(kv.Key)) continue;
+            if (kv.Value.Number == top.Number) return kv.Key;
+        }
+        return SlotRef.None;
+    }
 }
 
 /// <summary>
@@ -570,4 +583,6 @@ public class CardBeliefs
             if (world.IsActive(kv.Key)) ids.Add(kv.Value.Id);
         return ids;
     }
+    
+
 }

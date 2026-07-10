@@ -92,6 +92,7 @@ public class GameState
     private bool _matchedThisTurn;
     private bool _awaitingGiveCard;
     private SlotRef _matchReceiver;      // opponent slot the giver must fill
+    private int _giverSide = -1; // for matching in opponents turn
     private bool _awaitingPeekConfirm;   // a look-power peeked; only FinishPeeking is legal now
 
     private SlotRef _powerSource;
@@ -145,6 +146,7 @@ public class GameState
         _drawn = Card.None;
         _powerStep = PowerStep.None;
         _matchReceiver = SlotRef.None;
+        _giverSide = -1;
         _powerSource = SlotRef.None;
         _tradeOpponent = SlotRef.None;
         _tradeOwn = SlotRef.None;
@@ -188,6 +190,7 @@ public class GameState
             _matchedThisTurn = _matchedThisTurn,
             _awaitingGiveCard = _awaitingGiveCard,
             _matchReceiver = _matchReceiver,
+            _giverSide = _giverSide,
             _awaitingPeekConfirm = _awaitingPeekConfirm,
             _powerSource = _powerSource,
             _tradeOpponent = _tradeOpponent,
@@ -237,6 +240,7 @@ public class GameState
             case GamePhase.DrawingCard:
                 if (_awaitingGiveCard)
                 {
+                    int giver = _giverSide >= 0 ? _giverSide : ActiveSide;
                     foreach (var s in ActiveSlotsOf(ActiveSide))
                         moves.Add(GameCommand.Give(s));
                 }
@@ -479,6 +483,7 @@ public class GameState
         {
             // Matched an opponent card -> you must hand one of yours into the gap.
             _awaitingGiveCard = true;
+            _giverSide = ActiveSide;
             _matchReceiver = s;
         }
         return true;
@@ -496,10 +501,12 @@ public class GameState
         var receiver = _matchReceiver;
         _awaitingGiveCard = false;
         _matchReceiver = SlotRef.None;
+        _giverSide = -1;
 
         fx.Add(new GameEffect { Kind = EffectKind.SlotsSwapped, Slot = s, Slot2 = receiver });
         fx.Add(new GameEffect { Kind = EffectKind.GiveDone });
-        // No EndTurn: the active player must still draw this turn.
+        
+        
         return true;
     }
 
@@ -708,5 +715,38 @@ public class GameState
         Mark(_drawn);
 
         return ok && seen.Count == Card.DeckSize;
+    }
+    
+    public MoveResult TrySnap(int snapperSide, SlotRef s)
+    {
+        var fx = new List<GameEffect>();
+
+        if (_phase != GamePhase.DrawingCard || _awaitingGiveCard) return new MoveResult { Ok = false, Effects = fx };
+        if (!IsActive(s)) return new MoveResult { Ok = false, Effects = fx };
+        Card top = TopDiscard;
+        if (top.IsNone) return new MoveResult { Ok = false, Effects = fx };
+
+        Card c = GetCard(s);
+        bool success = c.Number == top.Number;
+
+        if (!success)
+        {
+            ApplyPenalty(snapperSide, fx);
+            fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Success = false, ByPlayer = snapperSide == PlayerSide });
+            return new MoveResult { Ok = true, Effects = fx };
+        }
+
+        bool snappersOwn = s.Side == snapperSide;
+        Discard(c);
+        SetCard(s, Card.None);
+        fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Success = true, ByPlayer = snapperSide == PlayerSide });
+
+        if (!snappersOwn)
+        {
+            _awaitingGiveCard = true;
+            _giverSide = snapperSide;
+            _matchReceiver = s;
+        }
+        return new MoveResult { Ok = true, Effects = fx };
     }
 }

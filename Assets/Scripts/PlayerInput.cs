@@ -75,9 +75,24 @@ public class PlayerInput
     // --- Slot taps ---
     public void ClickSlot(int side, Zone zone, int index)
     {
-        if (!CanAct) return;
-        var slot = new SlotRef(side, zone, index);
         var st = _gm.State;
+        if (st == null || st.IsTerminal) return;
+        var slot = new SlotRef(side, zone, index);
+
+        if (!st.IsPlayerTurn)
+        {
+            
+            if (st.AwaitingGiveCard && st.GiveByPlayer)
+            {
+                ClearArmed();
+                _gm.SubmitGiveOutOfTurn(GameState.PlayerSide, slot);
+            }
+            else if (st.Phase == GamePhase.DrawingCard)
+            {
+                HandleMatchTap(slot);
+            }
+            return;
+        }
 
         switch (st.Phase)
         {
@@ -114,7 +129,8 @@ public class PlayerInput
         {
             _gm.SetSlotArmed(slot, false);
             _armed = SlotRef.None;
-            _gm.SubmitPlayer(GameCommand.Match(slot));
+            if (_gm.State.IsPlayerTurn) _gm.SubmitPlayer(GameCommand.Match(slot));
+            else _gm.SubmitSnap(GameState.PlayerSide, slot);
         }
         else
         {
