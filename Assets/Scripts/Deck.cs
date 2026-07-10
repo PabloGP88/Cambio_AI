@@ -1,16 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// What used to be the Deck MonoBehaviour is now purely a *card catalog*: it maps physical
-/// card ids (0..53) to sprites and produces the initial shuffled ordering. All deck LOGIC
-/// (drawing, discard, reshuffle) moved into GameState, because the AI must be able to run
-/// that logic thousands of times per move without touching the scene.
-///
-/// Inspector setup: drop the 54 face sprites into cardSprites in id order
-///   0..12 black A..K, 13..25 red A..K, 26..38 red A..K, 39..51 black A..K, 52..53 jokers
-/// and assign cardBack + emptyDiscard.
-/// </summary>
 public class Deck : MonoBehaviour
 {
     [Header("Sprites (index = card id, length 54)")]
