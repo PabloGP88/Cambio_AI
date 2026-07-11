@@ -8,7 +8,6 @@ public enum GamePhase
     DrawingCard,
     CardDrawn,
     SelectingSwapSlot,
-    DiscardingDrawn,   // transient (never rests here)
     UsingPower,
     CambioCalled,      // transient
     GameOver
@@ -247,7 +246,6 @@ public class GameState
                 else
                 {
                     if (CanDraw()) moves.Add(GameCommand.DrawFromDeck());
-                    if (_discard.Count > 0) moves.Add(GameCommand.DrawFromDiscard());
                     if (!_cambioCalled) moves.Add(GameCommand.CallCambio());
                     if (!_matchedThisTurn && _discard.Count > 0)
                     {

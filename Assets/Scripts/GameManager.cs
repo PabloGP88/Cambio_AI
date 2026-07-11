@@ -2,17 +2,6 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-/// <summary>
-/// The bridge between the pure game core and Unity. It:
-///   * owns the ONE authoritative GameState,
-///   * exposes a single Submit path (SubmitPlayer / SubmitAI both funnel to Apply),
-///   * fires C# events the view subscribes to (transient UI: reveals, draws, flashes...),
-///   * reconciles slot visibility from state after every move (SyncViews), and
-///   * drives the turn loop: after each move, if it's the AI's decision, ask the agent.
-///
-/// It deliberately holds NO rules. Rules live in GameState; player->command translation
-/// lives in PlayerInput; AI->command lives in AICambioAgent.
-/// </summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
@@ -49,10 +38,11 @@ public class GameManager : MonoBehaviour
     public event Action OnSlotsSwapped;
     public event Action<int> OnGameOver;                          // winnerSide (-1 draw)
     public event Action<CommandType, bool> OnCommandApplied;
+    public event Action<GameEffect, int> OnEffectApplied;
 
     private bool _aiRoutineActive;
-    // --- AI search reporting (drives the ISMCTS debug panels in GameUI) ---
     public event Action<IsmctsReport> OnAiSearchDecision;  // once, when a move has been chosen
+    public event Action<string> OnAiNarration; // Tell player whats going on
 
     private struct Pre
     {
@@ -109,6 +99,7 @@ public class GameManager : MonoBehaviour
         {
             DispatchEffect(fx);
             _ai?.Observe(fx, iAmActor: actorSide == GameState.AISide);
+            OnEffectApplied?.Invoke(fx, actorSide);  // Keep track who applied for csv graphs
         }
 
         if (State.Phase != pre.Phase || State.IsPlayerTurn != pre.Turn || State.PowerStep != pre.Step)
@@ -118,6 +109,12 @@ public class GameManager : MonoBehaviour
             OnAwaitingGiveCard?.Invoke(State.GiveByPlayer);
 
         OnCommandApplied?.Invoke(cmdType, pre.Turn);
+
+        if (actorSide == GameState.AISide)
+        {
+            string say = AiNarrator.Describe(cmdType, result.Effects, State);
+            OnAiNarration?.Invoke(say);
+        }
 
         SyncViews();
         MaybePromptAI();

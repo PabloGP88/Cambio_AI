@@ -75,6 +75,11 @@ public class GameUI : MonoBehaviour
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TextMeshProUGUI gameOverText;
 
+    [Header("AI Commentary")]
+    [SerializeField] private TextMeshProUGUI aiNarrationText;
+    [SerializeField] private int narrationHistory = 6;
+    private readonly System.Collections.Generic.Queue<string> _narrationLog = new();
+    
     [Header("AI ISMCTS Debug Panels")]
     // Aggregate stats for the search that just ran: iterations, elapsed time, root visits,
     // nodes expanded, how many of the legal root moves actually got explored. This is the
@@ -103,6 +108,8 @@ public class GameUI : MonoBehaviour
         _gm.OnGiveCardDone += HandleGiveCardDone;
         _gm.OnPenaltyAdded += HandlePenaltyAdded;
         _gm.OnAiSearchDecision += HandleAiSearchDecision;
+        
+        _gm.OnAiNarration += HandleAiNarration;   
 
         ResetPenaltyUI();
         SetImageAlpha(matchSlotImage, 0f);
@@ -133,6 +140,8 @@ public class GameUI : MonoBehaviour
         _gm.OnGiveCardDone -= HandleGiveCardDone;
         _gm.OnPenaltyAdded -= HandlePenaltyAdded;
         _gm.OnAiSearchDecision -= HandleAiSearchDecision;
+        _gm.OnAiNarration -= HandleAiNarration; 
+
     }
 
     // ----------------------------------------------------------------------
@@ -523,4 +532,15 @@ public class GameUI : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    private void HandleAiNarration(string line)
+    {
+        print(line);
+        if (aiNarrationText == null || string.IsNullOrEmpty(line)) return;
+
+        _narrationLog.Enqueue(line);
+        int keep = Mathf.Max(1, narrationHistory);
+        while (_narrationLog.Count > keep) _narrationLog.Dequeue();
+
+        aiNarrationText.text = string.Join("\n\n", _narrationLog);
+    }
 }
