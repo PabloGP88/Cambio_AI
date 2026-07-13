@@ -35,6 +35,7 @@ public enum EffectKind
     SlotsSwapped,        // Slot = a, Slot2 = b (Slot2 = None for a one-slot change)
     GiveDone,
     InformedTradeReady,  // Card = opponent card, Card2 = own card
+    DrawnDiscarded, // Card = discarded draw, Success = actorIsPlayer
     GameOver
 }
 
@@ -81,6 +82,7 @@ public class GameState
     private bool _isPlayerTurn;
     private Card _drawn;             // card just picked up
     private CardPower _activePower;  // power currently being resolved, if any
+    private bool _drawnFromDiscard;
 
     // Endgame
     private bool _cambioCalled;
@@ -194,6 +196,7 @@ public class GameState
             _powerSource = _powerSource,
             _tradeOpponent = _tradeOpponent,
             _tradeOwn = _tradeOwn,
+            _drawnFromDiscard = _drawnFromDiscard,
             _rng = new Random(seed)
         };
     }
@@ -322,10 +325,12 @@ public class GameState
     {
         if (_phase != GamePhase.DrawingCard || _awaitingGiveCard) return false;
 
-        Card card = fromDiscard ? DrawFromDiscard() : DrawCard();
+        Card card =  DrawCard();
         if (card.IsNone) return false;
 
+        _drawnFromDiscard = fromDiscard;
         _drawn = card;
+        
         _phase = GamePhase.CardDrawn;
 
         fx.Add(new GameEffect
@@ -390,7 +395,9 @@ public class GameState
             Kind = EffectKind.SlotsSwapped,
             Slot = s,
             Slot2 = SlotRef.None,
-            Card = placed
+            Card = placed,
+            Card2 = displaced,
+            Success = _drawnFromDiscard,
         });
 
         EndTurn(fx);
@@ -633,14 +640,7 @@ public class GameState
     }
 
     private Card DrawCard() => DrawNoReshuffle();
-
-    private Card DrawFromDiscard()
-    {
-        if (_discard.Count == 0) return Card.None;
-        Card c = _discard[_discard.Count - 1];
-        _discard.RemoveAt(_discard.Count - 1);
-        return c;
-    }
+    
 
     private void Discard(Card c)
     {
