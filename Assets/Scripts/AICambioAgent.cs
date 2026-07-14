@@ -498,6 +498,8 @@ public class CardBeliefs
     private readonly int _mySide;
     private readonly int _handSize;
     private readonly int _penaltySize;
+    
+    
 
     private readonly Dictionary<SlotRef, Card> _known = new();
 
