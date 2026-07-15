@@ -16,16 +16,7 @@ public class PlayerInput
             _gm.SubmitPlayer(GameCommand.DrawFromDeck());
         }
     }
-
-    public void PressDrawDiscard()
-    {
-        _selectingSwap = false; 
-        
-        if (CanAct)
-        {
-            _gm.SubmitPlayer(GameCommand.DrawFromDiscard());
-        }
-    }
+    
 
     public void PressDiscardDrawn()
     {

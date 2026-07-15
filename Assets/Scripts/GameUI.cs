@@ -157,7 +157,6 @@ public class GameUI : MonoBehaviour
     }
 
     public void OnDrawFromDeckPressed()    => _gm.Player.PressDrawDeck();
-    public void OnDrawFromDiscardPressed() => _gm.Player.PressDrawDiscard();
     public void OnDiscardDrawnPressed()    => _gm.Player.PressDiscardDrawn();
     public void OnSwapDrawnPressed()       => _gm.Player.PressBeginSwap();
     public void OnCambioPressed()          => _gm.Player.PressCambio();

@@ -235,6 +235,8 @@ public class AICambioAgent : IAgent
         return score + unknown * 5.0;   // assume ~5 per unknown own card
     }
 
+    public double CambioShift = 0.25;
+    private readonly double[] _ew = new double[12]; 
     /// <summary>
     /// One fully specified world consistent with the AI's knowledge: clone the public state,
     /// fill every hidden slot and the draw pile with a uniform sample of unseen cards.
@@ -257,9 +259,8 @@ public class AICambioAgent : IAgent
             return null;
         }
 
-        Shuffle(pool);
-        world.OverwriteHidden(hidden, pool.GetRange(0, hidden.Count));
-        world.SetDrawPile(pool.GetRange(hidden.Count, pool.Count - hidden.Count));
+        bool oppCambio = world.CambioCalled && world.PlayerCalledCambio;   
+        AssignHidden(world, hidden, pool, oppCambio);
 
         if (ValidateDeterminizations && !world.IsCardSetWorking())
         {
@@ -486,6 +487,65 @@ public class AICambioAgent : IAgent
         }
         return SlotRef.None;
     }
+    
+    private double EffTilt(SlotRef s, int oppSide, bool oppCambio)
+    {
+        double t = _beliefs.TiltFor(s);
+        if (oppCambio && s.Side == oppSide) t += CambioShift;
+        return t;
+    }
+
+    private static int ValueIdx(int cardId) => new Card(cardId).Value + 1;   // -1..10 -> 0..11
+
+    /// <summary>Belief-weighted assignment of hidden slots to distinct pool cards
+    /// (weighted sampling without replacement), remainder becomes the draw pile.</summary>
+    private void AssignHidden(GameState world, List<SlotRef> hidden, List<int> pool, bool oppCambio)
+    {
+        int oppSide = GameState.OpponentOf(_mySide);
+
+        // Peaky slots pick from the full pool first: reduces the sequential-WOR bias.
+        hidden.Sort((a, b) =>
+            Math.Abs(EffTilt(b, oppSide, oppCambio)).CompareTo(
+                Math.Abs(EffTilt(a, oppSide, oppCambio))));
+
+        var assigned = new int[hidden.Count];
+
+        for (int k = 0; k < hidden.Count; k++)
+        {
+            double theta = EffTilt(hidden[k], oppSide, oppCambio);
+            int pick;
+
+            if (theta == 0.0 || pool.Count == 1)
+            {
+                pick = _rng.Next(pool.Count);                       // uniform fast path
+            }
+            else
+            {
+                for (int v = -1; v <= 10; v++) _ew[v + 1] = Math.Exp(-theta * v);
+
+                double total = 0;
+                for (int i = 0; i < pool.Count; i++) total += _ew[ValueIdx(pool[i])];
+
+                double r = _rng.NextDouble() * total, acc = 0;
+                pick = pool.Count - 1;
+                for (int i = 0; i < pool.Count; i++)
+                {
+                    acc += _ew[ValueIdx(pool[i])];
+                    if (r <= acc) { pick = i; break; }
+                }
+            }
+
+            assigned[k] = pool[pick];
+            int last = pool.Count - 1;                              // O(1) swap-remove
+            pool[pick] = pool[last];
+            pool.RemoveAt(last);
+        }
+
+        world.OverwriteHidden(hidden, assigned);
+        Shuffle(pool);                                             // draw pile: genuinely uninformed
+        world.SetDrawPile(pool);
+    }
+    
 }
 
 /// <summary>
@@ -499,7 +559,22 @@ public class CardBeliefs
     private readonly int _handSize;
     private readonly int _penaltySize;
     
-    
+
+    public double KeepAlpha      = 0.03;   // per surviving opp turn, known-and-kept slot
+    public int    KeepTurnCap    = 6;
+    public double SwapInBase     = 0.10;   // base low-tilt when opp keeps a hidden draw
+    public double DisplacedAlpha = 0.02;   // per point of the card they threw away
+    public double DiscardAlpha   = 0.02;   // per point below typical of a plain discard
+    public double TypicalValue   = 6.0;    // ~pool mean
+    public double GlobalCap      = 0.60;   // clamp on accumulated global shift
+
+
+    private readonly int _oppSide;
+    private readonly Dictionary<SlotRef, double> _tilt = new();
+    private readonly HashSet<SlotRef> _oppKnows = new();
+    private readonly Dictionary<SlotRef, int> _oppKnownSince = new();
+    private int _oppTurnCount;
+    private double _oppGlobalTilt;
 
     private readonly Dictionary<SlotRef, Card> _known = new();
 
@@ -508,6 +583,14 @@ public class CardBeliefs
         _mySide = mySide;
         _handSize = handSize;
         _penaltySize = penaltySize;
+        _oppSide = GameState.OpponentOf(mySide);
+        var o0 = new SlotRef(_oppSide, Zone.Hand, 0);
+        var o1 = new SlotRef(_oppSide, Zone.Hand, 1);
+        _oppKnows.Add(o0); _oppKnownSince[o0] = 0;
+        if (handSize > 1)
+        {
+            _oppKnows.Add(o1); _oppKnownSince[o1] = 0;
+        }
     }
 
     public IReadOnlyDictionary<SlotRef, Card> Known => _known;
@@ -532,9 +615,15 @@ public class CardBeliefs
     {
         switch (effect.Kind)
         {
+            case EffectKind.CardDrawn:
+                if (!iAmActor)
+                {
+                    _oppTurnCount++;
+                }
+                break;
+            
             case EffectKind.SlotRevealed:
-                // Only learn it if WE looked (LookOwn / LookOpponent). Never read the card
-                // when the opponent peeks — that would be cheating.
+                // Only learn it if WE looked (LookOwn / LookOpponent)
                 if (iAmActor) SetKnow(effect.Slot, effect.Card);
                 break;
 
@@ -542,26 +631,65 @@ public class CardBeliefs
                 if (effect.Slot2.IsNone)
                 {
                     // Swap-drawn-into-slot: single slot changed.
-                    if (iAmActor) SetKnow(effect.Slot, effect.Card);   // we know what we placed
-                    else _known.Remove(effect.Slot);                   // opponent replaced it with an unknown
+                    if (iAmActor)
+                    {
+                        SetKnow(effect.Slot, effect.Card);   // we know what we placed
+                        ClearSlotMeta(effect.Slot);
+                    }
+                    else
+                    {
+                        _known.Remove(effect.Slot);
+                        ClearSlotMeta(effect.Slot);
+                        _tilt[effect.Slot] = SwapInBase + DisplacedAlpha * effect.Card2.Value;
+                    }
                 }
                 else
                 {
                     SwapKnow(effect.Slot, effect.Slot2);
+                    SwapTilt(effect.Slot, effect.Slot2);
                 }
                 break;
 
             case EffectKind.MatchResolved:
                 if (effect.Slot.IsNone) break;                         // drawn-card match, no slot
-                if (effect.Success) _known.Remove(effect.Slot);        // card left the slot
-                else SetKnow(effect.Slot, effect.Card);                // failed match reveals it to everyone
+                    
+                if (effect.Success)
+                {
+                    _known.Remove(effect.Slot);        // card left the slot
+                    ClearSlotMeta(effect.Slot);
+                }
+                else 
+                {
+                    SetKnow(effect.Slot, effect.Card);                // failed match reveals it to everyone
+                }
+                
                 break;
+            
+            case EffectKind.DrawnDiscarded:
 
+                if (!iAmActor)
+                {
+                    var excess = TypicalValue - effect.Card.Value;   // low discard = strong signal
+
+                    if (excess > 0)
+                    {
+                        _oppGlobalTilt += DiscardAlpha * excess;
+                        if (_oppGlobalTilt > GlobalCap)
+                        {
+                            _oppGlobalTilt = GlobalCap;
+                        }
+                    }
+                }
+                
+                break;
+            
             case EffectKind.InformedTradeReady:
                 if (iAmActor)
                 {
                     SetKnow(effect.Slot, effect.Card);                 // opponent slot we looked at
                     SetKnow(effect.Slot2, effect.Card2);               // own slot
+                    ClearSlotMeta(effect.Slot);
+                    ClearSlotMeta(effect.Slot2);
                 }
                 break;
         }
@@ -586,5 +714,40 @@ public class CardBeliefs
         return ids;
     }
     
+    public double TiltFor(SlotRef s)
+    {
+        double theta = _tilt.TryGetValue(s, out var t) ? t : 0.0;
+        if (s.Side == _oppSide) theta += _oppGlobalTilt;
 
+        if (_oppKnows.Contains(s) && _oppKnownSince.TryGetValue(s, out var since))
+        {
+            int survived = _oppTurnCount - since;
+            if (survived > KeepTurnCap) survived = KeepTurnCap;
+            if (survived > 0) theta += KeepAlpha * survived;
+        }
+        return theta;
+    }
+    
+    private void ClearSlotMeta(SlotRef s)
+    {
+        _tilt.Remove(s);
+        _oppKnows.Remove(s);
+        _oppKnownSince.Remove(s);
+    }
+
+    // Move tilt + opp-known-ness with the card on a two-slot swap (mirror of SwapKnow).
+    private void SwapTilt(SlotRef a, SlotRef b)
+    {
+        bool hasA = _tilt.TryGetValue(a, out var ta);
+        bool hasB = _tilt.TryGetValue(b, out var tb);
+        if (hasB) _tilt[a] = tb; else _tilt.Remove(a);
+        if (hasA) _tilt[b] = ta; else _tilt.Remove(b);
+
+        bool ka = _oppKnows.Contains(a), kb = _oppKnows.Contains(b);
+        _oppKnownSince.TryGetValue(a, out var sa);
+        _oppKnownSince.TryGetValue(b, out var sb);
+        if (kb) { _oppKnows.Add(a); _oppKnownSince[a] = sb; } else ClearOppKnown(a);
+        if (ka) { _oppKnows.Add(b); _oppKnownSince[b] = sa; } else ClearOppKnown(b);
+    }
+    private void ClearOppKnown(SlotRef s) { _oppKnows.Remove(s); _oppKnownSince.Remove(s); }
 }

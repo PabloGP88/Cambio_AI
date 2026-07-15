@@ -82,7 +82,6 @@ public class GameState
     private bool _isPlayerTurn;
     private Card _drawn;             // card just picked up
     private CardPower _activePower;  // power currently being resolved, if any
-    private bool _drawnFromDiscard;
 
     // Endgame
     private bool _cambioCalled;
@@ -196,7 +195,6 @@ public class GameState
             _powerSource = _powerSource,
             _tradeOpponent = _tradeOpponent,
             _tradeOwn = _tradeOwn,
-            _drawnFromDiscard = _drawnFromDiscard,
             _rng = new Random(seed)
         };
     }
@@ -306,8 +304,7 @@ public class GameState
         var fx = new List<GameEffect>();
         bool ok = cmd.Type switch
         {
-            CommandType.DrawFromDeck      => DoDraw(fromDiscard: false, fx),
-            CommandType.DrawFromDiscard   => DoDraw(fromDiscard: true, fx),
+            CommandType.DrawFromDeck      => DoDraw(fx),
             CommandType.DiscardDrawn      => DoDiscardDrawn(fx),
             CommandType.SwapDrawnIntoSlot => DoSwapDrawn(cmd.Slot, fx),
             CommandType.UsePowerOnSlot    => DoUsePower(cmd.Slot, fx),
@@ -321,16 +318,14 @@ public class GameState
         return new MoveResult { Ok = ok, Effects = fx };
     }
 
-    private bool DoDraw(bool fromDiscard, List<GameEffect> fx)
+    private bool DoDraw(List<GameEffect> fx)
     {
         if (_phase != GamePhase.DrawingCard || _awaitingGiveCard) return false;
 
-        Card card =  DrawCard();
+        Card card = DrawCard();
         if (card.IsNone) return false;
 
-        _drawnFromDiscard = fromDiscard;
         _drawn = card;
-        
         _phase = GamePhase.CardDrawn;
 
         fx.Add(new GameEffect
@@ -368,13 +363,22 @@ public class GameState
             EndTurn(fx);
             return true;
         }
-
-        Discard(_drawn);
-        _activePower = _drawn.Power;
+        
+        Card discarded = _drawn;
+        Discard(discarded);
+        _activePower = discarded.Power;
         _drawn = Card.None;
+
+        fx.Add(new GameEffect
+        {
+            Kind = EffectKind.DrawnDiscarded,
+            Card = discarded,
+            Success = _isPlayerTurn
+        });
 
         if (_activePower != CardPower.None) BeginPower(_activePower);
         else EndTurn(fx);
+
         return true;
     }
 
@@ -397,7 +401,6 @@ public class GameState
             Slot2 = SlotRef.None,
             Card = placed,
             Card2 = displaced,
-            Success = _drawnFromDiscard,
         });
 
         EndTurn(fx);

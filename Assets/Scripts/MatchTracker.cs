@@ -243,7 +243,7 @@ public class MatchTracker : MonoBehaviour
 
         // Decision time = wall-clock from turn start to the first turn-consuming action.
         if (wasPlayerTurn && !_turnFirstActionRecorded &&
-            (type == CommandType.DrawFromDeck || type == CommandType.DrawFromDiscard || type == CommandType.CallCambio))
+            (type == CommandType.DrawFromDeck || type == CommandType.CallCambio))
         {
             _turnDecisionMs = (Time.realtimeSinceStartup - _turnStartRt) * 1000.0;
             _turnAction = type.ToString();
