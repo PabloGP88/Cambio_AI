@@ -241,7 +241,7 @@ public class GameState
                 if (_awaitingGiveCard)
                 {
                     int giver = _giverSide >= 0 ? _giverSide : ActiveSide;
-                    foreach (var s in ActiveSlotsOf(ActiveSide))
+                    foreach (var s in ActiveSlotsOf(giver))
                         moves.Add(GameCommand.Give(s));
                 }
                 else
@@ -500,6 +500,7 @@ public class GameState
     private bool DoGiveCard(SlotRef s, List<GameEffect> fx)
     {
         if (!_awaitingGiveCard) return false;
+        int giver = _giverSide >= 0 ? _giverSide : ActiveSide;
         if (s.Side != ActiveSide || !IsActive(s)) return false;
 
         Card given = GetCard(s);

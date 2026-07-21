@@ -104,6 +104,9 @@ public class AICambioAgent : IAgent
 
     // On a belief/pool inconsistency, skip that determinization instead of crashing the turn.
     public bool ValidateDeterminizations = true;
+    
+    // switch from using or not bayerisan
+    public bool UseBayesianLayer = true;
 
     public bool DebugLogging { get => MctsDebug.Enabled; set => MctsDebug.Enabled = value; }
     public int DebugVerbosity { get => MctsDebug.Verbosity; set => MctsDebug.Verbosity = value; }
@@ -490,6 +493,8 @@ public class AICambioAgent : IAgent
     
     private double EffTilt(SlotRef s, int oppSide, bool oppCambio)
     {
+        if (!UseBayesianLayer) return 0.0;
+        
         double t = _beliefs.TiltFor(s);
         if (oppCambio && s.Side == oppSide) t += CambioShift;
         return t;
@@ -559,6 +564,15 @@ public class CardBeliefs
     private readonly int _handSize;
     private readonly int _penaltySize;
     
+    
+    // 0.03
+    // 6
+    // 0.10
+    // 0.02
+    // 0.02
+    // 6.0
+    // 0.6
+    
 
     public double KeepAlpha      = 0.03;   // per surviving opp turn, known-and-kept slot
     public int    KeepTurnCap    = 6;
@@ -566,7 +580,7 @@ public class CardBeliefs
     public double DisplacedAlpha = 0.02;   // per point of the card they threw away
     public double DiscardAlpha   = 0.02;   // per point below typical of a plain discard
     public double TypicalValue   = 6.0;    // ~pool mean
-    public double GlobalCap      = 0.60;   // clamp on accumulated global shift
+    public double GlobalCap      = 0.6;   // clamp on accumulated global shift
 
 
     private readonly int _oppSide;

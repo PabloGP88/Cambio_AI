@@ -18,7 +18,8 @@ public class GameManager : MonoBehaviour
 
     [Header("AI")]
     [SerializeField] private float aiThinkSeconds = 0.6f;
-
+    [Tooltip("On = belief-weighted sampling. Off = plain ISMCTS.")]
+    [SerializeField] private bool aiUseBayesianLayer = true;
     public GameState State { get; private set; }
     public PlayerInput Player { get; private set; }
     public Deck Catalog => deck;
@@ -76,9 +77,13 @@ public class GameManager : MonoBehaviour
         InitSlotViews(playerPenaltySlots, GameState.PlayerSide, Zone.Penalty);
         InitSlotViews(aiPenaltySlots, GameState.AISide, Zone.Penalty);
 
-        _ai = new AICambioAgent(seed);
+        _ai = new AICambioAgent(seed)
+        {
+            UseBayesianLayer = aiUseBayesianLayer
+        };
         _ai.OnSearchDecision += HandleAiSearchDecision;
         _ai.OnNewGame(GameState.AISide, State);
+        
 
         SyncViews();
         OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn); // -> GameUI shows opening peek

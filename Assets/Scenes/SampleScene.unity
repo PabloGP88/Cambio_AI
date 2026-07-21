@@ -14589,7 +14589,8 @@ MonoBehaviour:
   - {fileID: 1382831032}
   - {fileID: 1836034211}
   - {fileID: 860142138}
-  aiThinkSeconds: 3
+  aiThinkSeconds: 1.5
+  aiUseBayesianLayer: 0
 --- !u!4 &2142519799
 Transform:
   m_ObjectHideFlags: 0
