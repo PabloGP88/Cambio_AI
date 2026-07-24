@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: WaveBehavior
   m_EditorClassIdentifier: Febucci.TextAnimator.Runtime::Febucci.UI.Effects.WaveBehavior
   tagID: wave
-  baseAmplitude: 7.27
+  baseAmplitude: 0.86
   baseFrequency: 4
   baseWaveSize: 0.4
