@@ -3,28 +3,14 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
-/// <summary>
-/// Presentation layer, wired to the new pure-C# game core.
-///
-/// The SERIALIZED FIELDS and the public On*Pressed() methods below are kept IDENTICAL to
-/// the original GameUI so your existing scene/Inspector wiring (panels, arrows, penalty
-/// slots, button OnClick events) carries over with no re-wiring. Only the *internals*
-/// were ported to the new API:
-///   - card sprites come from the Deck catalog via deck.SpriteFor(card)
-///   - events now carry Card structs / int side+index instead of CardSlot objects
-///   - actions route through GameManager.Player.PressX()
-///
-/// AI "thinking" is no longer a canned phrase picked from an array. GameManager runs the
-/// AI's search and forwards a single structured IsmctsReport via OnAiSearchDecision once
-/// the move is chosen. That drives two panels: ismctsRunStatsText (iterations, elapsed
-/// time, how much of the tree got explored) and ismctsDecisionText (the chosen move's
-/// visits/reward vs. its closest runner-up).
-/// </summary>
 public class GameUI : MonoBehaviour
 {
-    [Header("Turn UI")]
+
+    [Header("Turn UI")] 
+    [SerializeField] private string aiName;
     [SerializeField] private GameObject turnUI;
     [SerializeField] private Image turnLabel;
     [SerializeField] private TextMeshProUGUI turnText;
@@ -377,7 +363,7 @@ public class GameUI : MonoBehaviour
     private void SetTurnLabel(bool isPlayerTurn)
     {
         turnLabel.color = isPlayerTurn ? playerTurnColor : aiTurnColor;
-        turnText.text = isPlayerTurn ? "Your Turn!" : "Ben's Turn!";
+        turnText.text = isPlayerTurn ? "Your Turn!" :  aiName + " Turn!";
     }
 
     private void RefreshDiscardDisplay()
@@ -501,8 +487,8 @@ public class GameUI : MonoBehaviour
         
         int playerScore = _gm.GetScore(true);
         int aiScore = _gm.GetScore(false);
-        string result = playerScore < aiScore ? "You win!" : playerScore > aiScore ? "Ben wins!" : "Draw!";
-        gameOverText.text = $"{result}\nYou: {playerScore}  |  Ben: {aiScore}";
+        string result = playerScore < aiScore ? "You win!" : playerScore > aiScore ? aiName + " wins!" : "Draw!";
+        gameOverText.text = $"{result}\nYou: {playerScore}  |  {aiName}: {aiScore}";
         gameOverPanel.SetActive(true);
         
         

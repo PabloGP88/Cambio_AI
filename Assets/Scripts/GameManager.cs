@@ -38,12 +38,14 @@ public class GameManager : MonoBehaviour
     public event Action<bool, int> OnPenaltyAdded;                // forPlayer, index
     public event Action OnSlotsSwapped;
     public event Action<int> OnGameOver;                          // winnerSide (-1 draw)
-    public event Action<CommandType, bool> OnCommandApplied;
+    public event Action<CommandType, bool, int> OnCommandApplied;
     public event Action<GameEffect, int> OnEffectApplied;
 
     private bool _aiRoutineActive;
     public event Action<IsmctsReport> OnAiSearchDecision;  // once, when a move has been chosen
     public event Action<string> OnAiNarration; // Tell player whats going on
+    public event Action<BeliefReport> OnAiBeliefSnapshot;
+    public bool AiUsesBayesian => aiUseBayesianLayer;
 
     private struct Pre
     {
@@ -84,7 +86,9 @@ public class GameManager : MonoBehaviour
         _ai.OnSearchDecision += HandleAiSearchDecision;
         _ai.OnNewGame(GameState.AISide, State);
         
-
+        if (_ai is AICambioAgent concrete)
+            concrete.OnBeliefSnapshot += r => OnAiBeliefSnapshot?.Invoke(r);
+        
         SyncViews();
         OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn); // -> GameUI shows opening peek
     }
@@ -113,7 +117,7 @@ public class GameManager : MonoBehaviour
         if (State.AwaitingGiveCard && !pre.AwaitGive)
             OnAwaitingGiveCard?.Invoke(State.GiveByPlayer);
 
-        OnCommandApplied?.Invoke(cmdType, pre.Turn);
+        OnCommandApplied?.Invoke(cmdType, pre.Turn, actorSide);
 
         if (actorSide == GameState.AISide)
         {
@@ -253,6 +257,8 @@ public class GameManager : MonoBehaviour
     /// <summary>Make every slot view match the truth: visible iff it holds a card. Clears arming.</summary>
     private void SyncViews()
     {
+        Player?.ClearArmed(); 
+        
         Reconcile(playerSlots, GameState.PlayerSide, Zone.Hand);
         Reconcile(aiSlots, GameState.AISide, Zone.Hand);
         Reconcile(playerPenaltySlots, GameState.PlayerSide, Zone.Penalty);

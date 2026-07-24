@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 public static class AiNarrator
 {
-    private const string Me = "Ben";
+    private const string Me = "Eva";
     
     private static string Pos(SlotRef s)
     {

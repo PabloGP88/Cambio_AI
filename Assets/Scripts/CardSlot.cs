@@ -2,17 +2,12 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI; 
 
-/// <summary>
-/// A slot is now a pure VIEW. It no longer owns a Card or any rules — it just knows its
-/// address (side, zone, index), shows/hides itself to mirror GameState, can highlight when
-/// "armed" for a match, and forwards taps to PlayerInput as an addressed click.
-/// GameManager.SyncViews() drives visibility; nothing here mutates game state.
-/// </summary>
+
 public class CardSlot : MonoBehaviour, IPointerClickHandler
 {
     [Header("Optional visuals")]
     [SerializeField] private GameObject highlight;   // shown when armed
-    [SerializeField] private SpriteRenderer faceOrBack; // optional: a card-back image, etc.
+    [SerializeField] private SpriteRenderer faceOrBack; 
 
     public int Side { get; private set; }
     public Zone Zone { get; private set; }

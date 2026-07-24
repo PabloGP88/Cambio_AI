@@ -10,7 +10,7 @@ public class PlayerInput
     public void PressDrawDeck()
     {
         _selectingSwap = false;
-
+        ClearArmed();
         if (CanAct)
         {
             _gm.SubmitPlayer(GameCommand.DrawFromDeck());
@@ -58,6 +58,8 @@ public class PlayerInput
     {
         if (CanAct && _gm.State.Phase == GamePhase.CardDrawn)
         {
+            ClearArmed();
+
             _selectingSwap = true;
             _gm.EnterSwapSelection();
         }
@@ -96,6 +98,7 @@ public class PlayerInput
                 if (_selectingSwap)
                 {
                     _selectingSwap = false;
+                    ClearArmed();
                     _gm.SubmitPlayer(GameCommand.SwapDrawnInto(slot));
                 }
                 break;

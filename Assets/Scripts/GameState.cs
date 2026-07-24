@@ -113,7 +113,8 @@ public class GameState
     public bool PlayerCalledCambio => _cambioCallerSide == PlayerSide;
     public int FinalRoundTurnsLeft => _finalRoundTurnsLeft;
     public bool AwaitingGiveCard => _awaitingGiveCard;
-    public bool GiveByPlayer => _isPlayerTurn; // matcher is always the active side in this ruleset
+    public int  GiverSide    => _giverSide >= 0 ? _giverSide : ActiveSide;
+    public bool GiveByPlayer => GiverSide == PlayerSide;
     public bool AwaitingPeekConfirm => _awaitingPeekConfirm;
     public bool MatchedThisTurn => _matchedThisTurn;
     public bool IsTerminal => _phase == GamePhase.GameOver;
@@ -474,8 +475,7 @@ public class GameState
 
         if (!success)
         {
-            // Failed match just adds a penalty; the match flag is NOT consumed, so another
-            // attempt is technically still legal this turn.
+            _matchedThisTurn = true;
             ApplyPenalty(ActiveSide, fx);
             fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Success = false, ByPlayer = _isPlayerTurn });
             return true;
@@ -501,7 +501,7 @@ public class GameState
     {
         if (!_awaitingGiveCard) return false;
         int giver = _giverSide >= 0 ? _giverSide : ActiveSide;
-        if (s.Side != ActiveSide || !IsActive(s)) return false;
+        if (s.Side != giver || !IsActive(s)) return false;
 
         Card given = GetCard(s);
         SetCard(s, Card.None);
