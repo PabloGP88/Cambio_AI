@@ -364,7 +364,8 @@ public class AICambioAgent : IAgent
     }
 
     private const double EvalTempo = 8.0;         // softness of the tanh
-    private const double EvalTargetScore = 14.0;  // AI hand score we treat as "fine"
+    private const double EvalTargetScore = 14.0;  // AI hand score we treat as ok
+    private const double PenaltyAversion = 0.03;
 
     private double Evaluate(GameState world)
     {
@@ -372,18 +373,22 @@ public class AICambioAgent : IAgent
         {
             int w = world.WinnerSide();
             if (w == GameState.AISide) return 1.0;
-            if (w < 0) return 0.5;   // draw
+            if (w < 0) return 0.5;
             return 0.0;
         }
 
-        // Non-terminal leaf: blend (a) am I ahead of the opponent with (b) is my own hand
-        // low in absolute terms. (b) makes the search prefer improving its hand over ending
-        // the game at an even position.
-        int ai = world.Score(GameState.AISide);
+        int ai  = world.Score(GameState.AISide);
         int opp = world.Score(GameState.OpponentOf(GameState.AISide));
         double rel = 0.5 + 0.5 * Math.Tanh((opp - ai) / EvalTempo);
         double abs = 0.5 - 0.5 * Math.Tanh((ai - EvalTargetScore) / EvalTempo);
-        return 0.5 * rel + 0.5 * abs;
+
+        // Linear, un-saturated cost for penalty cards the AI is carrying.
+        double aiPenalty = 0;
+        foreach (var s in world.GetActiveSlots(GameState.AISide))
+            if (s.Zone == Zone.Penalty) aiPenalty += world.GetCard(s).Value;
+
+        double blended = 0.5 * rel + 0.5 * abs - PenaltyAversion * aiPenalty;
+        return blended < 0 ? 0 : blended > 1 ? 1 : blended;
     }
 
     private void Shuffle(List<int> list)

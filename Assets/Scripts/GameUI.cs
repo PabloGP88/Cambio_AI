@@ -61,6 +61,12 @@ public class GameUI : MonoBehaviour
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TextMeshProUGUI gameOverText;
 
+    [Header("Session Tracker UI")]
+    // Running totals across the whole session, read from the persistent MatchTracker.
+    // Both are optional — leave either unassigned if you don't need it.
+    [SerializeField] private TextMeshProUGUI sessionGamesText;   // e.g. "3 / 10 games"
+    [SerializeField] private TextMeshProUGUI sessionScoreText;   // e.g. "4 - 3" (player - AI)
+
     [Header("AI Commentary")]
     [SerializeField] private TextMeshProUGUI aiNarrationText;
     [SerializeField] private int narrationHistory = 6;
@@ -84,6 +90,10 @@ public class GameUI : MonoBehaviour
         _gm = GameManager.Instance;
         _deck = _gm.Catalog;                 // was _gm.Getdeck()
 
+        // Feed the inspector name into the (static) narrator so its commentary matches
+        // the on-screen label. Set before any AI turn can produce a line.
+        AiNarrator.Name = string.IsNullOrEmpty(aiName) ? "Eva" : aiName;
+
         _gm.OnPhaseChanged += HandlePhaseChanged;
         _gm.OnCardDrawn += HandleCardDrawn;
         _gm.OnSlotRevealed += HandleSlotRevealed;
@@ -96,6 +106,12 @@ public class GameUI : MonoBehaviour
         _gm.OnAiSearchDecision += HandleAiSearchDecision;
         
         _gm.OnAiNarration += HandleAiNarration;   
+
+        // Session HUD: the MatchTracker persists across game reloads, so read the current
+        // running totals now and refresh whenever a game finishes.
+        if (MatchTracker.Instance != null)
+            MatchTracker.Instance.OnSessionUpdated += RefreshSessionTracker;
+        RefreshSessionTracker();
 
         ResetPenaltyUI();
         SetImageAlpha(matchSlotImage, 0f);
@@ -115,6 +131,10 @@ public class GameUI : MonoBehaviour
 
     void OnDestroy()
     {
+        // Unhook the session tracker first — this must run even if _gm was never set.
+        if (MatchTracker.Instance != null)
+            MatchTracker.Instance.OnSessionUpdated -= RefreshSessionTracker;
+
         if (_gm == null) return;
         _gm.OnPhaseChanged -= HandlePhaseChanged;
         _gm.OnCardDrawn -= HandleCardDrawn;
@@ -146,6 +166,17 @@ public class GameUI : MonoBehaviour
     public void OnDiscardDrawnPressed()    => _gm.Player.PressDiscardDrawn();
     public void OnSwapDrawnPressed()       => _gm.Player.PressBeginSwap();
     public void OnCambioPressed()          => _gm.Player.PressCambio();
+
+    /// <summary>Wire this to a "Next game" / "Continue" button (e.g. on the game-over panel).
+    /// Plays the next game, or — once the session's games are all played — exports the data
+    /// and loads the scene named on the MatchTracker.</summary>
+    public void OnNextGamePressed()
+    {
+        if (MatchTracker.Instance != null)
+            MatchTracker.Instance.AdvanceToNextGame();
+        else
+            RestartGame();   // fallback if there's no tracker in the scene
+    }
 
     public void OnHidePeekedCardPressed()
     {
@@ -271,13 +302,22 @@ public class GameUI : MonoBehaviour
         }
     }
 
+    private void RefreshSessionTracker()
+    {
+        var t = MatchTracker.Instance;
+        if (t == null) return;
+
+        if (sessionGamesText != null)
+            sessionGamesText.text = $"{t.GamesCompleted} / {t.GamesToPlay - 1} games";
+
+        if (sessionScoreText != null)
+            sessionScoreText.text = $"{t.PlayerWins} - {t.AiWins}";
+    }
+
     // ----------------------------------------------------------------------
     // ISMCTS debug panels
     // ----------------------------------------------------------------------
-
-    /// <summary>Fired once per AI decision. Fills the run-stats panel (iterations,
-    /// elapsed time, how much of the tree got explored) and the decision panel (chosen
-    /// move vs. its closest runner-up).</summary>
+    
     private void HandleAiSearchDecision(IsmctsReport report)
     {
         if (ismctsRunStatsText)

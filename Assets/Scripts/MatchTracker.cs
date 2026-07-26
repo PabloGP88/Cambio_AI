@@ -23,17 +23,27 @@ public class MatchTracker : MonoBehaviour
     [Tooltip("Log the per-decision belief rows. Turn off for a pure behavioural run.")]
     public bool logBeliefRows = true;
 
+    [Header("Session")]
+    [Tooltip("How many games make up one data-collection run for this agent. The player plays this many, then the CSV is exported and nextSceneName is loaded.")]
+    public int gamesToPlay = 10;
+    [Tooltip("Scene loaded once every game in the session has been played and the CSV has been exported. Leave empty to just export and stay in this scene.")]
+    public string nextSceneName;
+
+    // ---- public session accessors (for the on-screen HUD) ----
+    public int  GamesToPlay     => gamesToPlay;
+    public int  GamesCompleted  => _gamesCompleted;
+    public int  PlayerWins      => _playerWins;
+    public int  AiWins          => _aiWins;
+    public int  Draws           => _draws;
+    public bool SessionComplete => _gamesCompleted >= gamesToPlay;
+
+    /// <summary>Fires whenever a game finishes and the session totals change, so any HUD can refresh.</summary>
+    public event Action OnSessionUpdated;
+
     private const int P = GameState.PlayerSide;   // 0
     private const int A = GameState.AISide;       // 1
 
-    // Fixed column order for the move-distribution block.
-    private static readonly CommandType[] MoveKinds =
-    {
-        CommandType.DrawFromDeck, CommandType.DiscardDrawn, CommandType.SwapDrawnIntoSlot,
-        CommandType.UsePowerOnSlot, CommandType.AttemptMatch, CommandType.GiveCard,
-        CommandType.ConfirmTrade, CommandType.FinishPeeking, CommandType.CallCambio
-    };
-
+    // Only the AI's power usage is exported, but we still aggregate per power type internally.
     private static readonly CardPower[] PowerKinds =
     {
         CardPower.LookOwnCard, CardPower.LookOpponentCard, CardPower.BlindSwap, CardPower.LookAndSwap
@@ -44,26 +54,27 @@ public class MatchTracker : MonoBehaviour
     private readonly List<string> _beliefLines = new();
     private int _matchIndex;
 
+    // ---- session totals (survive same-scene reloads; a new scene taking over starts fresh) ----
+    private int _gamesCompleted;
+    private int _playerWins;
+    private int _aiWins;
+    private int _draws;
+    private string _ownerScene;
+
     private MatchData _m;
     private bool _matchInProgress;
-    private CardBeliefs _playerBeliefs;      // reconstruction of what the HUMAN knows
-    private BeliefReport _lastAiBelief;      // for the Cambio-calibration columns
+    private BeliefReport _lastAiBelief;      // AI's decision-time snapshot; drives unknown-swap + cambio calibration
 
     private int _lastTurnOwner = -1;
     private GamePhase _prevPhase;
-    private float _turnStartRt;
-    private bool _turnFirstActionRecorded;
 
     private GameManager _gm;
     private string _sessionId;
-
-    // ==================================================================== data
 
     private class MatchData
     {
         public int Index;
         public string StartedUtc;
-        public float startRt;
         public bool completed;
         public int winnerSide = -2;              // -2 unset, -1 draw, 0 player, 1 ai
         public bool bayesianOn;
@@ -73,7 +84,7 @@ public class MatchTracker : MonoBehaviour
         public int plies;
         public int[] cardsEnd = new int[2];
 
-        // --- drawn-card decisions ---
+        // --- drawn-card decisions (AI exported; player index populated but unused) ---
         public int[] swaps = new int[2];
         public int[] discards = new int[2];
         public int[] unknownSwaps = new int[2];       // swapped into a slot they could not identify
@@ -96,20 +107,15 @@ public class MatchTracker : MonoBehaviour
         public int[] matchOnOpp = new int[2];
         public int[] penalties = new int[2];
 
-        // --- move distribution ---
-        public readonly Dictionary<CommandType, int>[] moves = { new(), new() };
-
         // --- cambio ---
         public int cambioCaller = -2;
-        public int cambioPly = -1;
         public int cambioCallerTurn = -1;
-        public double cambioTimeS = -1;
         public int cambioDrawpile = -1;
         public int[] cambioCards = { -1, -1 };
         public double cambioAiBelievedScore = double.NaN;
         public int[] cambioActualScore = { -1, -1 };
 
-        // --- decision latency ---
+        // --- decision latency (AI search wall-clock only) ---
         public readonly List<double>[] decisionMs = { new(), new() };
     }
 
@@ -117,9 +123,29 @@ public class MatchTracker : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        // Capture the scene we belong to BEFORE DontDestroyOnLoad moves us out of it.
+        _ownerScene = gameObject.scene.name;
+
+        if (Instance != null && Instance != this)
+        {
+            if (Instance._ownerScene == _ownerScene)
+            {
+                // Same scene reloaded for the next game: keep the running session,
+                // discard this duplicate. (Existing behaviour.)
+                Destroy(gameObject);
+                return;
+            }
+
+            // A different scene (the other agent) has loaded. The old tracker belongs to
+            // the previous scene and must NOT leak into this one — retire it and take over
+            // with a fresh session.
+            SceneManager.sceneLoaded -= Instance.OnSceneLoaded;
+            Instance.StopAllCoroutines();
+            Destroy(Instance.gameObject);
+        }
+
         Instance = this;
-        _sessionId = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss"); 
+        _sessionId = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         DontDestroyOnLoad(gameObject);
         SceneManager.sceneLoaded += OnSceneLoaded;
         StartCoroutine(HookRoutine());
@@ -150,9 +176,9 @@ public class MatchTracker : MonoBehaviour
     private void Subscribe(GameManager gm)
     {
         gm.OnPhaseChanged     += HandlePhase;
-        gm.OnCommandApplied   += HandleCommand;      // signature now carries actorSide
+        gm.OnCommandApplied   += HandleCommand;      // signature carries actorSide
         gm.OnEffectApplied    += HandleEffect;
-        gm.OnAiBeliefSnapshot += HandleBelief;       // new event on GameManager
+        gm.OnAiBeliefSnapshot += HandleBelief;
         gm.OnAiSearchDecision += HandleAiDecision;   // search latency only
         gm.OnGameOver         += HandleGameOver;
     }
@@ -164,31 +190,18 @@ public class MatchTracker : MonoBehaviour
         if (_matchInProgress && _m != null && !_m.completed)
             FinalizeMatch(false, -2);
 
-        var st = _gm.State;
         _matchIndex++;
         _m = new MatchData
         {
             Index = _matchIndex,
             StartedUtc = DateTime.UtcNow.ToString("o"),
-            startRt = Time.realtimeSinceStartup,
             bayesianOn = _gm.AiUsesBayesian
         };
         _matchInProgress = true;
         _lastAiBelief = null;
 
-        // Reconstruct the human's knowledge exactly like the AI does for itself, so
-        // "did they swap into a slot they couldn't identify" is symmetric across sides.
-        _playerBeliefs = new CardBeliefs(P, st.HandSize, st.PenaltySize);
-        for (int i = 0; i < 2 && i < st.HandSize; i++)
-        {
-            var slot = new SlotRef(P, Zone.Hand, i);
-            _playerBeliefs.SetKnow(slot, st.GetCard(slot));
-        }
-
         _lastTurnOwner = -1;
-        _prevPhase = st.Phase;
-        _turnFirstActionRecorded = false;
-        _turnStartRt = Time.realtimeSinceStartup;
+        _prevPhase = _gm.State.Phase;
     }
 
     // ============================================================ event hooks
@@ -212,9 +225,6 @@ public class MatchTracker : MonoBehaviour
             {
                 _lastTurnOwner = owner;
                 _m.turns[owner]++;
-                _turnStartRt = Time.realtimeSinceStartup;
-                _turnFirstActionRecorded = false;
-
                 if (_gm.State != null) { _m.score[P] = _gm.GetScore(true); _m.score[A] = _gm.GetScore(false); }
             }
         }
@@ -228,25 +238,13 @@ public class MatchTracker : MonoBehaviour
         _m.plies++;
 
         int side = actorSide == A ? A : P;
-        _m.moves[side].TryGetValue(type, out var n);
-        _m.moves[side][type] = n + 1;
-
-        // Human decision latency: wall clock from turn start to the first turn-consuming action.
-        if (side == P && !_turnFirstActionRecorded &&
-            (type == CommandType.DrawFromDeck || type == CommandType.CallCambio))
-        {
-            _m.decisionMs[P].Add((Time.realtimeSinceStartup - _turnStartRt) * 1000.0);
-            _turnFirstActionRecorded = true;
-        }
 
         if (type == CommandType.DiscardDrawn) _m.discards[side]++;
 
         if (type == CommandType.CallCambio)
         {
             _m.cambioCaller     = side;
-            _m.cambioPly        = _m.plies;
             _m.cambioCallerTurn = _m.turns[side];
-            _m.cambioTimeS      = Time.realtimeSinceStartup - _m.startRt;
             _m.cambioDrawpile   = _gm.State != null ? _gm.State.DrawPileCount : -1;
             _m.cambioCards[P]   = CountCards(P);
             _m.cambioCards[A]   = CountCards(A);
@@ -263,7 +261,6 @@ public class MatchTracker : MonoBehaviour
     {
         if (_m == null) return;
         int side = actorSide == A ? A : P;
-        bool actorIsPlayer = side == P;
 
         switch (fx.Kind)
         {
@@ -275,9 +272,7 @@ public class MatchTracker : MonoBehaviour
                 if (fx.Slot2.IsNone)
                 {
                     // Drawn card swapped into a slot. Card = placed, Card2 = displaced.
-                    bool known = KnownBy(side, fx.Slot);   // checked BEFORE the belief update below
                     _m.swaps[side]++;
-                    if (!known) _m.unknownSwaps[side]++;
 
                     double delta = fx.Card.Value - fx.Card2.Value;   // negative = they improved
                     _m.swapDelta[side].Add(delta);
@@ -285,12 +280,17 @@ public class MatchTracker : MonoBehaviour
 
                     // A power card buried in hand is a power NOT played.
                     if (fx.Card.Power != CardPower.None) _m.powerBuried[side, (int)fx.Card.Power]++;
+
+                    // "Blind" swaps are only meaningful for the AI (whose beliefs we export).
+                    // _lastAiBelief is the AI's decision-time snapshot, captured BEFORE this effect.
+                    if (side == A && _lastAiBelief != null && _lastAiBelief.Slots != null &&
+                        !_lastAiBelief.Slots.Exists(sl => sl.Known && sl.Slot.Equals(fx.Slot)))
+                        _m.unknownSwaps[side]++;
                 }
                 else if (fx.Slot.Side != fx.Slot2.Side)
                 {
                     // Cross-side swap from a power. The effect carries no cards, but the swap has
-                    // already been applied, so read the post-swap truth straight off the state:
-                    // the actor's slot now holds what it received, the other slot what it gave.
+                    // already been applied, so read the post-swap truth straight off the state.
                     _m.powerTargetsOpp[side]++;
 
                     SlotRef mine = fx.Slot.Side == side ? fx.Slot : fx.Slot2;
@@ -331,8 +331,6 @@ public class MatchTracker : MonoBehaviour
                 _m.penalties[fx.Success ? P : A]++;   // Success == forPlayer
                 break;
         }
-
-        _playerBeliefs.Update(fx, actorIsPlayer);
     }
 
     /// <summary>One row per active slot, every time the AI commits to a move.</summary>
@@ -415,6 +413,47 @@ public class MatchTracker : MonoBehaviour
 
         _matchInProgress = false;
         _m = null;
+
+        // Only genuinely finished games count toward the session totals.
+        if (completed)
+        {
+            _gamesCompleted++;
+            if (winnerSide == P) _playerWins++;
+            else if (winnerSide == A) _aiWins++;
+            else _draws++;
+
+            OnSessionUpdated?.Invoke();
+        }
+    }
+
+
+    public void AdvanceToNextGame()
+    {
+        if (SessionComplete)
+        {
+            FinishSessionAndAdvance();
+            return;
+        }
+
+        // Same-scene reload: this tracker survives (DontDestroyOnLoad) and keeps the session
+        // totals; the reloaded scene's duplicate tracker destroys itself in Awake.
+        string scene = string.IsNullOrEmpty(_ownerScene)
+            ? SceneManager.GetActiveScene().name
+            : _ownerScene;
+        SceneManager.LoadScene(scene);
+    }
+
+    /// <summary>Export this agent's data to Downloads (exactly as the P key / Export button
+    /// does), then load the scene named in the inspector. If nextSceneName is empty, it just
+    /// exports and stays put.</summary>
+    public void FinishSessionAndAdvance()
+    {
+        ExportCsv();
+
+        if (!string.IsNullOrEmpty(nextSceneName))
+            SceneManager.LoadScene(nextSceneName);
+        else
+            Debug.Log("[MatchTracker] Session complete and exported; no nextSceneName set.");
     }
 
     private int CountCards(int side)
@@ -425,19 +464,10 @@ public class MatchTracker : MonoBehaviour
         return n;
     }
 
-    private bool KnownBy(int side, SlotRef slot)
-    {
-        // The human's knowledge is reconstructed here; the AI reports its own.
-        if (side == P) return _playerBeliefs.Known.ContainsKey(slot);
-        return _lastAiBelief != null && _lastAiBelief.Slots != null
-               && _lastAiBelief.Slots.Exists(s => s.Known && s.Slot.Equals(slot));
-    }
-
     // ============================================================ match row
 
     private string BuildMatchLine(MatchData m)
     {
-        double dur = Time.realtimeSinceStartup - m.startRt;
         var f = new List<string>
         {
             Csv(_sessionId),
@@ -448,55 +478,42 @@ public class MatchTracker : MonoBehaviour
             m.completed ? "1" : "0",
             SideName(m.winnerSide),
             I(m.score[P]), I(m.score[A]), I(m.score[P] - m.score[A]),
-            I(m.turns[P]), I(m.turns[A]), I(m.plies), F(dur),
-            I(m.cardsEnd[P]), I(m.cardsEnd[A]),
+            I(m.plies), I(m.turns[A]), I(m.cardsEnd[A]),
         };
 
-        // Symmetric behavioural block, player first then AI.
-        foreach (int s in new[] { P, A })
-        {
-            int sw = m.swaps[s], di = m.discards[s];
-            f.Add(I(sw));
-            f.Add(I(di));
-            f.Add(F(sw + di > 0 ? (double)sw / (sw + di) : double.NaN));
-            f.Add(I(m.unknownSwaps[s]));
-            f.Add(F(sw > 0 ? (double)m.unknownSwaps[s] / sw : double.NaN));
-            f.Add(I(m.wastefulSwaps[s]));
-            f.Add(F(Avg(m.swapDelta[s])));
+        // AI behavioural block only — the human opponent is a confound, not a subject.
+        int sw = m.swaps[A], di = m.discards[A];
+        f.Add(I(sw));
+        f.Add(I(di));
+        f.Add(F(sw + di > 0 ? (double)sw / (sw + di) : double.NaN));
+        f.Add(I(m.unknownSwaps[A]));
+        f.Add(F(sw > 0 ? (double)m.unknownSwaps[A] / sw : double.NaN));
+        f.Add(I(m.wastefulSwaps[A]));
+        f.Add(F(Avg(m.swapDelta[A])));
 
-            int played = 0, buried = 0;
-            foreach (var pw in PowerKinds) { played += m.powerPlayed[s, (int)pw]; buried += m.powerBuried[s, (int)pw]; }
-            f.Add(I(m.powerDrawn[s]));
-            f.Add(I(played));
-            f.Add(I(buried));
-            f.Add(I(m.powerMatchedAway[s]));
-            f.Add(F(m.powerDrawn[s] > 0 ? (double)played / m.powerDrawn[s] : double.NaN));  // play rate
-            foreach (var pw in PowerKinds) f.Add(I(m.powerPlayed[s, (int)pw]));
-            foreach (var pw in PowerKinds) f.Add(I(m.powerBuried[s, (int)pw]));
-            f.Add(I(m.powerTargetsOpp[s]));
-            f.Add(F(Avg(m.powerSwapGain[s])));
+        int played = 0, buried = 0;
+        foreach (var pw in PowerKinds) { played += m.powerPlayed[A, (int)pw]; buried += m.powerBuried[A, (int)pw]; }
+        f.Add(I(m.powerDrawn[A]));
+        f.Add(I(played));
+        f.Add(I(buried));
+        f.Add(I(m.powerMatchedAway[A]));
+        f.Add(F(m.powerDrawn[A] > 0 ? (double)played / m.powerDrawn[A] : double.NaN));  // play rate
+        f.Add(I(m.powerTargetsOpp[A]));
+        f.Add(F(Avg(m.powerSwapGain[A])));
 
-            f.Add(I(m.matchAttempts[s]));
-            f.Add(I(m.matchSuccess[s]));
-            f.Add(I(m.matchFail[s]));
-            f.Add(F(m.matchAttempts[s] > 0 ? (double)m.matchSuccess[s] / m.matchAttempts[s] : double.NaN));
-            f.Add(I(m.matchOnOwn[s]));
-            f.Add(I(m.matchOnOpp[s]));
-            f.Add(I(m.penalties[s]));
+        f.Add(I(m.matchAttempts[A]));
+        f.Add(I(m.matchSuccess[A]));
+        f.Add(I(m.matchFail[A]));
+        f.Add(F(m.matchAttempts[A] > 0 ? (double)m.matchSuccess[A] / m.matchAttempts[A] : double.NaN));
+        f.Add(I(m.matchOnOwn[A]));
+        f.Add(I(m.matchOnOpp[A]));
+        f.Add(I(m.penalties[A]));
 
-            f.Add(F(Avg(m.decisionMs[s])));
-            f.Add(F(Min(m.decisionMs[s])));
-            f.Add(F(Max(m.decisionMs[s])));
-
-            foreach (var mk in MoveKinds) { m.moves[s].TryGetValue(mk, out var c); f.Add(I(c)); }
-            f.Add(Csv(MostUsed(m.moves[s])));
-        }
+        f.Add(F(Avg(m.decisionMs[A])));
 
         // Cambio block.
         f.Add(CallerName(m.cambioCaller));
-        f.Add(m.cambioPly >= 0 ? I(m.cambioPly) : "");
         f.Add(m.cambioCallerTurn >= 0 ? I(m.cambioCallerTurn) : "");
-        f.Add(m.cambioTimeS >= 0 ? F(m.cambioTimeS) : "");
         f.Add(m.cambioDrawpile >= 0 ? I(m.cambioDrawpile) : "");
         f.Add(m.cambioCards[P] >= 0 ? I(m.cambioCards[P]) : "");
         f.Add(m.cambioCards[A] >= 0 ? I(m.cambioCards[A]) : "");
@@ -511,22 +528,18 @@ public class MatchTracker : MonoBehaviour
         return string.Join(",", f);
     }
 
-    private static string SideBlockHeader(string p) =>
-        $"{p}_swaps,{p}_discards,{p}_swap_rate,{p}_unknown_swaps,{p}_unknown_swap_rate,{p}_wasteful_swaps,{p}_swap_value_delta_avg," +
-        $"{p}_power_cards_drawn,{p}_powers_played,{p}_powers_buried,{p}_powers_matched_away,{p}_power_play_rate," +
-        $"{p}_played_look_own,{p}_played_look_opp,{p}_played_blind_swap,{p}_played_look_and_swap," +
-        $"{p}_buried_look_own,{p}_buried_look_opp,{p}_buried_blind_swap,{p}_buried_look_and_swap," +
-        $"{p}_power_targets_opponent,{p}_power_swap_gain_avg," +
-        $"{p}_match_attempts,{p}_match_success,{p}_match_fail,{p}_match_hit_rate,{p}_matches_on_own,{p}_matches_on_opponent,{p}_penalties," +
-        $"{p}_decision_ms_avg,{p}_decision_ms_min,{p}_decision_ms_max," +
-        $"{p}_mv_draw,{p}_mv_discard,{p}_mv_swap_drawn,{p}_mv_use_power,{p}_mv_match,{p}_mv_give,{p}_mv_confirm_trade,{p}_mv_finish_peek,{p}_mv_cambio," +
-        $"{p}_most_used_move";
+    private static string AiBlockHeader =>
+        "ai_swaps,ai_discards,ai_swap_rate,ai_unknown_swaps,ai_unknown_swap_rate,ai_wasteful_swaps,ai_swap_value_delta_avg," +
+        "ai_power_cards_drawn,ai_powers_played,ai_powers_buried,ai_powers_matched_away,ai_power_play_rate," +
+        "ai_power_targets_opponent,ai_power_swap_gain_avg," +
+        "ai_match_attempts,ai_match_success,ai_match_fail,ai_match_hit_rate,ai_matches_on_own,ai_matches_on_opponent,ai_penalties," +
+        "ai_decision_ms_avg";
 
     private static string MatchHeader =>
         "session_id,match_index,timestamp_utc,agent_label,bayesian_on,completed,winner," +
-        "player_score,ai_score,score_margin,player_turns,ai_turns,plies,duration_s,player_cards_end,ai_cards_end," +
-        SideBlockHeader("player") + "," + SideBlockHeader("ai") + "," +
-        "cambio_caller,cambio_ply,cambio_caller_turn,cambio_time_s,cambio_drawpile_remaining," +
+        "player_score,ai_score,score_margin,plies,ai_turns,ai_cards_end," +
+        AiBlockHeader + "," +
+        "cambio_caller,cambio_caller_turn,cambio_drawpile_remaining," +
         "cambio_player_cards,cambio_ai_cards,cambio_player_score,cambio_ai_score," +
         "cambio_ai_believed_score,cambio_ai_belief_error,cambio_caller_was_ahead";
 
@@ -648,16 +661,7 @@ public class MatchTracker : MonoBehaviour
 
     // ============================================================ helpers
 
-    private static string MostUsed(Dictionary<CommandType, int> d)
-    {
-        string best = ""; int bn = -1;
-        foreach (var kv in d) if (kv.Value > bn) { bn = kv.Value; best = kv.Key.ToString(); }
-        return best;
-    }
-
     private static double Avg(List<double> xs){ if (xs.Count == 0) return double.NaN; double s = 0; foreach (var x in xs) s += x; return s / xs.Count; }
-    private static double Max(List<double> xs){ if (xs.Count == 0) return double.NaN; double m = double.NegativeInfinity; foreach (var x in xs) if (x > m) m = x; return m; }
-    private static double Min(List<double> xs){ if (xs.Count == 0) return double.NaN; double m = double.PositiveInfinity; foreach (var x in xs) if (x < m) m = x; return m; }
 
     private static string F(double v) => double.IsNaN(v) || double.IsInfinity(v) ? "" : v.ToString("0.###", CultureInfo.InvariantCulture);
     private static string I(int v) => v.ToString(CultureInfo.InvariantCulture);

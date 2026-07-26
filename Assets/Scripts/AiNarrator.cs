@@ -2,8 +2,8 @@ using System.Collections.Generic;
 
 public static class AiNarrator
 {
-    private const string Me = "Eva";
-    
+    public static string Name { get; set; }
+
     private static string Pos(SlotRef s)
     {
         if (s.IsNone) return "a card";
@@ -52,22 +52,22 @@ public static class AiNarrator
         switch (type)
         {
             case CommandType.DrawFromDeck:
-                return $"{Me} drew a card from the deck.";
+                return $"{Name} drew a card from the deck.";
 
             case CommandType.CallCambio:
-                return $"{Me} called Cambio, devastating";
+                return $"{Name} called Cambio, devastating";
 
             case CommandType.DiscardDrawn:
                 if (HasMatchNoSlot(effects))
-                    return $"{Me} discarded a matching card.";
+                    return $"{Name} discarded a matching card.";
                 if (stateAfter != null && stateAfter.Phase == GamePhase.UsingPower)
-                    return $"{Me} played a power card — about to {PowerName(stateAfter.ActivePower)}...";
-                return $"{Me} discarded the card he drew.";
+                    return $"{Name} played a power card — about to {PowerName(stateAfter.ActivePower)}...";
+                return $"{Name} discarded the card he drew.";
 
             case CommandType.SwapDrawnIntoSlot:
             {
                 SlotRef s = FirstSingleSwap(effects);
-                return s.IsNone ? null : $"{Me} swapped the drawn card into his {Pos(s)}.";
+                return s.IsNone ? null : $"{Name} swapped the drawn card into his {Pos(s)}.";
             }
 
             case CommandType.UsePowerOnSlot:
@@ -76,12 +76,12 @@ public static class AiNarrator
                 SlotRef looked = FirstReveal(effects);
                 if (!looked.IsNone)
                     return looked.Side == GameState.AISide
-                        ? $"{Me} looked at his {Pos(looked)} card."
-                        : $"{Me} looked at your {Pos(looked)} card.";
+                        ? $"{Name} looked at his {Pos(looked)} card."
+                        : $"{Name} looked at your {Pos(looked)} card.";
 
                 var (his, yours) = FirstCrossSwap(effects);
                 if (!his.IsNone)
-                    return $"{Me} swapped his {Pos(his)} with your {Pos(yours)}.";
+                    return $"{Name} swapped his {Pos(his)} with your {Pos(yours)}.";
 
                 return null; // intermediate pick (choosing which cards to swap) — stay quiet
             }
@@ -89,7 +89,7 @@ public static class AiNarrator
             case CommandType.ConfirmTrade:
             {
                 var (his, yours) = FirstCrossSwap(effects);
-                return his.IsNone ? null : $"{Me} swapped his {Pos(his)} with your {Pos(yours)}.";
+                return his.IsNone ? null : $"{Name} swapped his {Pos(his)} with your {Pos(yours)}.";
             }
 
             case CommandType.AttemptMatch:
@@ -98,14 +98,14 @@ public static class AiNarrator
                 if (m == null) return null;
                 var (slot, success) = m.Value;
                 if (!success)
-                    return $"{Me} tried to snap but missed...he is so chopped.";
+                    return $"{Name} tried to snap but missed...he is so chopped.";
                 return slot.Side == GameState.AISide
-                    ? $"{Me} matched his {Pos(slot)}! Get good brah"
-                    : $"{Me} snapped your {Pos(slot)}! You are so slow";
+                    ? $"{Name} matched his {Pos(slot)}! Get good brah"
+                    : $"{Name} snapped your {Pos(slot)}! You are so slow";
             }
 
             case CommandType.GiveCard:
-                return $"{Me} handed you one of his cards.";
+                return $"{Name} handed you one of his cards.";
 
             case CommandType.FinishPeeking:
             default:
