@@ -365,7 +365,7 @@ public class AICambioAgent : IAgent
 
     private const double EvalTempo = 8.0;         // softness of the tanh
     private const double EvalTargetScore = 14.0;  // AI hand score we treat as ok
-    private const double PenaltyAversion = 0.03;
+    private const double PenaltyAversion = 0.05;
 
     private double Evaluate(GameState world)
     {
