@@ -1,0 +1,689 @@
+fileFormatVersion: 2
+guid: b5ed272968f494e1eae9772226eb140c
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 1900609316810964646
+    second: abertay_logo_0
+  - first:
+      213: 7715166537914438791
+    second: abertay_logo_1
+  - first:
+      213: -5921461274398039727
+    second: abertay_logo_2
+  - first:
+      213: -4863132855185166173
+    second: abertay_logo_3
+  - first:
+      213: 3958818743547336438
+    second: abertay_logo_4
+  - first:
+      213: 4952303778448283347
+    second: abertay_logo_5
+  - first:
+      213: -4115474547141864085
+    second: abertay_logo_6
+  - first:
+      213: 135262149238896402
+    second: abertay_logo_7
+  - first:
+      213: 2474855785459207696
+    second: abertay_logo_8
+  - first:
+      213: -3662272459240320502
+    second: abertay_logo_9
+  - first:
+      213: 1945133298131301667
+    second: abertay_logo_10
+  - first:
+      213: -2014962285517392131
+    second: abertay_logo_11
+  - first:
+      213: 363725498076233881
+    second: abertay_logo_12
+  - first:
+      213: 7688847769458035917
+    second: abertay_logo_13
+  - first:
+      213: 3885873114039174256
+    second: abertay_logo_14
+  - first:
+      213: -4634375084891741738
+    second: abertay_logo_15
+  - first:
+      213: 1387144972041540403
+    second: abertay_logo_16
+  - first:
+      213: 2118569043167393192
+    second: abertay_logo_17
+  - first:
+      213: 2087704290765116287
+    second: abertay_logo_18
+  - first:
+      213: 7780083016005971795
+    second: abertay_logo_19
+  - first:
+      213: 6389461118466034683
+    second: abertay_logo_20
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: abertay_logo_0
+      rect:
+        serializedVersion: 2
+        x: 107
+        y: 81
+        width: 156
+        height: 179
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6aeb0519a12506a10800000000000000
+      internalID: 1900609316810964646
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_1
+      rect:
+        serializedVersion: 2
+        x: 284
+        y: 175
+        width: 97
+        height: 85
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 784de5be617c11b60800000000000000
+      internalID: 7715166537914438791
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_2
+      rect:
+        serializedVersion: 2
+        x: 383
+        y: 174
+        width: 71
+        height: 86
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 151e54c185eb2dda0800000000000000
+      internalID: -5921461274398039727
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_3
+      rect:
+        serializedVersion: 2
+        x: 462
+        y: 174
+        width: 61
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3a038272f6ea28cb0800000000000000
+      internalID: -4863132855185166173
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_4
+      rect:
+        serializedVersion: 2
+        x: 530
+        y: 175
+        width: 46
+        height: 61
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f61c4b2cac80f630800000000000000
+      internalID: 3958818743547336438
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_5
+      rect:
+        serializedVersion: 2
+        x: 580
+        y: 174
+        width: 46
+        height: 77
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d61c3e4c0e1ab440800000000000000
+      internalID: 4952303778448283347
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_6
+      rect:
+        serializedVersion: 2
+        x: 632
+        y: 174
+        width: 65
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b65927f34b5e2e6c0800000000000000
+      internalID: -4115474547141864085
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_7
+      rect:
+        serializedVersion: 2
+        x: 698
+        y: 153
+        width: 69
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 217b0f4453c80e100800000000000000
+      internalID: 135262149238896402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_8
+      rect:
+        serializedVersion: 2
+        x: 284
+        y: 80
+        width: 90
+        height: 86
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 01ecd9a7934785220800000000000000
+      internalID: 2474855785459207696
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_9
+      rect:
+        serializedVersion: 2
+        x: 461
+        y: 151
+        width: 15
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a02d8441a9efc2dc0800000000000000
+      internalID: -3662272459240320502
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_10
+      rect:
+        serializedVersion: 2
+        x: 747
+        y: 151
+        width: 14
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 32576ebcd608efa10800000000000000
+      internalID: 1945133298131301667
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_11
+      rect:
+        serializedVersion: 2
+        x: 772
+        y: 80
+        width: 46
+        height: 77
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df63def1a7a6904e0800000000000000
+      internalID: -2014962285517392131
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_12
+      rect:
+        serializedVersion: 2
+        x: 378
+        y: 81
+        width: 73
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9900694d9663c0500800000000000000
+      internalID: 363725498076233881
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_13
+      rect:
+        serializedVersion: 2
+        x: 453
+        y: 81
+        width: 33
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dccc99e1f4644ba60800000000000000
+      internalID: 7688847769458035917
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_14
+      rect:
+        serializedVersion: 2
+        x: 486
+        y: 81
+        width: 69
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 074cb8c42056de530800000000000000
+      internalID: 3885873114039174256
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_15
+      rect:
+        serializedVersion: 2
+        x: 560
+        y: 80
+        width: 61
+        height: 63
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6d16b1d0a646fafb0800000000000000
+      internalID: -4634375084891741738
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_16
+      rect:
+        serializedVersion: 2
+        x: 628
+        y: 81
+        width: 45
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 333518ea001204310800000000000000
+      internalID: 1387144972041540403
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_17
+      rect:
+        serializedVersion: 2
+        x: 679
+        y: 80
+        width: 52
+        height: 63
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8a5b122f15ba66d10800000000000000
+      internalID: 2118569043167393192
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_18
+      rect:
+        serializedVersion: 2
+        x: 738
+        y: 81
+        width: 33
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f731d17cdf309fc10800000000000000
+      internalID: 2087704290765116287
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_19
+      rect:
+        serializedVersion: 2
+        x: 820
+        y: 59
+        width: 69
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 35fe51c484868fb60800000000000000
+      internalID: 7780083016005971795
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: abertay_logo_20
+      rect:
+        serializedVersion: 2
+        x: 874
+        y: 81
+        width: 21
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bfb8650d80deba850800000000000000
+      internalID: 6389461118466034683
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      abertay_logo_0: 1900609316810964646
+      abertay_logo_1: 7715166537914438791
+      abertay_logo_10: 1945133298131301667
+      abertay_logo_11: -2014962285517392131
+      abertay_logo_12: 363725498076233881
+      abertay_logo_13: 7688847769458035917
+      abertay_logo_14: 3885873114039174256
+      abertay_logo_15: -4634375084891741738
+      abertay_logo_16: 1387144972041540403
+      abertay_logo_17: 2118569043167393192
+      abertay_logo_18: 2087704290765116287
+      abertay_logo_19: 7780083016005971795
+      abertay_logo_2: -5921461274398039727
+      abertay_logo_20: 6389461118466034683
+      abertay_logo_3: -4863132855185166173
+      abertay_logo_4: 3958818743547336438
+      abertay_logo_5: 4952303778448283347
+      abertay_logo_6: -4115474547141864085
+      abertay_logo_7: 135262149238896402
+      abertay_logo_8: 2474855785459207696
+      abertay_logo_9: -3662272459240320502
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

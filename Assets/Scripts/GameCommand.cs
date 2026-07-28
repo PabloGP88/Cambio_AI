@@ -37,7 +37,6 @@ public readonly struct SlotRef : IEquatable<SlotRef>
 public enum CommandType
 {
     DrawFromDeck,
-    DrawFromDiscard,
     DiscardDrawn,
     SwapDrawnIntoSlot,
     UsePowerOnSlot,
@@ -64,7 +63,6 @@ public readonly struct GameCommand : IEquatable<GameCommand>
 
     // Default ones to iterate faster
     public static GameCommand DrawFromDeck()        => new(CommandType.DrawFromDeck, SlotRef.None);
-    public static GameCommand DrawFromDiscard()     => new(CommandType.DrawFromDiscard, SlotRef.None);
     public static GameCommand DiscardDrawn()        => new(CommandType.DiscardDrawn, SlotRef.None);
     public static GameCommand ConfirmTrade()        => new(CommandType.ConfirmTrade, SlotRef.None);
     public static GameCommand FinishPeeking()       => new(CommandType.FinishPeeking, SlotRef.None);

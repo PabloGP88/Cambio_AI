@@ -2,17 +2,6 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-/// <summary>
-/// The bridge between the pure game core and Unity. It:
-///   * owns the ONE authoritative GameState,
-///   * exposes a single Submit path (SubmitPlayer / SubmitAI both funnel to Apply),
-///   * fires C# events the view subscribes to (transient UI: reveals, draws, flashes...),
-///   * reconciles slot visibility from state after every move (SyncViews), and
-///   * drives the turn loop: after each move, if it's the AI's decision, ask the agent.
-///
-/// It deliberately holds NO rules. Rules live in GameState; player->command translation
-/// lives in PlayerInput; AI->command lives in AICambioAgent.
-/// </summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
@@ -29,7 +18,8 @@ public class GameManager : MonoBehaviour
 
     [Header("AI")]
     [SerializeField] private float aiThinkSeconds = 0.6f;
-
+    [Tooltip("On = belief-weighted sampling. Off = plain ISMCTS.")]
+    [SerializeField] private bool aiUseBayesianLayer = true;
     public GameState State { get; private set; }
     public PlayerInput Player { get; private set; }
     public Deck Catalog => deck;
@@ -48,11 +38,29 @@ public class GameManager : MonoBehaviour
     public event Action<bool, int> OnPenaltyAdded;                // forPlayer, index
     public event Action OnSlotsSwapped;
     public event Action<int> OnGameOver;                          // winnerSide (-1 draw)
-    public event Action<CommandType, bool> OnCommandApplied;
+    public event Action<CommandType, bool, int> OnCommandApplied;
+    public event Action<GameEffect, int> OnEffectApplied;
 
-    // --- AI search reporting (drives the ISMCTS debug panels in GameUI) ---
+    private bool _aiRoutineActive;
     public event Action<IsmctsReport> OnAiSearchDecision;  // once, when a move has been chosen
+    public event Action<string> OnAiNarration; // Tell player whats going on
+    public event Action<BeliefReport> OnAiBeliefSnapshot;
+    public bool AiUsesBayesian => aiUseBayesianLayer;
 
+    private struct Pre
+    {
+        public GamePhase Phase; 
+        public bool Turn;
+        public PowerStep Step; 
+        public bool AwaitGive;
+    }
+    private Pre Capture() => new Pre
+    {
+        Phase = State.Phase, 
+        Turn = State.IsPlayerTurn,
+        Step = State.PowerStep, 
+        AwaitGive = State.AwaitingGiveCard
+    };
     private void Awake()
     {
         Instance = this;
@@ -71,10 +79,16 @@ public class GameManager : MonoBehaviour
         InitSlotViews(playerPenaltySlots, GameState.PlayerSide, Zone.Penalty);
         InitSlotViews(aiPenaltySlots, GameState.AISide, Zone.Penalty);
 
-        _ai = new AICambioAgent(seed);
+        _ai = new AICambioAgent(seed)
+        {
+            UseBayesianLayer = aiUseBayesianLayer
+        };
         _ai.OnSearchDecision += HandleAiSearchDecision;
         _ai.OnNewGame(GameState.AISide, State);
-
+        
+        if (_ai is AICambioAgent concrete)
+            concrete.OnBeliefSnapshot += r => OnAiBeliefSnapshot?.Invoke(r);
+        
         SyncViews();
         OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn); // -> GameUI shows opening peek
     }
@@ -86,6 +100,36 @@ public class GameManager : MonoBehaviour
             if (slots[i] != null) slots[i].Init(side, zone, i);
     }
 
+    private void Commit(MoveResult result, Pre pre, CommandType cmdType, int actorSide)
+    {
+        if (!result.Ok) return;
+
+        foreach (var fx in result.Effects)
+        {
+            DispatchEffect(fx);
+            _ai?.Observe(fx, iAmActor: actorSide == GameState.AISide);
+            OnEffectApplied?.Invoke(fx, actorSide);  // Keep track who applied for csv graphs
+        }
+
+        if (State.Phase != pre.Phase || State.IsPlayerTurn != pre.Turn || State.PowerStep != pre.Step)
+            OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn);
+
+        if (State.AwaitingGiveCard && !pre.AwaitGive)
+            OnAwaitingGiveCard?.Invoke(State.GiveByPlayer);
+
+        OnCommandApplied?.Invoke(cmdType, pre.Turn, actorSide);
+
+        if (actorSide == GameState.AISide)
+        {
+            string say = AiNarrator.Describe(cmdType, result.Effects, State);
+            OnAiNarration?.Invoke(say);
+        }
+
+        SyncViews();
+        MaybePromptAI();
+        MaybePromptAiSnap();
+    }
+    
     // ----------------------------------------------------------------------
     // Submit
     // ----------------------------------------------------------------------
@@ -102,34 +146,27 @@ public class GameManager : MonoBehaviour
         Submit(cmd);
     }
 
+    // ReSharper disable Unity.PerformanceAnalysis
     private void Submit(GameCommand cmd)
     {
         if (State == null || State.IsTerminal) return;
+        int actorSide = State.ActiveSide;
+        var pre = Capture();
+        Commit(State.Apply(cmd), pre, cmd.Type, actorSide);
+    }
 
-        var prevPhase = State.Phase;
-        var prevTurn = State.IsPlayerTurn;
-        var prevStep = State.PowerStep;
-        bool prevAwaitGive = State.AwaitingGiveCard;
+    public void SubmitSnap(int snapperSide, SlotRef slot)
+    {
+        if (State == null || State.IsTerminal) return;
+        var pre = Capture();
+        Commit(State.TrySnap(snapperSide, slot), pre, CommandType.AttemptMatch, snapperSide);
+    }
 
-        MoveResult result = State.Apply(cmd);
-        if (!result.Ok) return;
-
-        foreach (var fx in result.Effects)
-        {
-            DispatchEffect(fx);
-            _ai?.Observe(fx, iAmActor: !prevTurn); // actor = side that was active before the move
-        }
-
-        if (State.Phase != prevPhase || State.IsPlayerTurn != prevTurn || State.PowerStep != prevStep)
-            OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn);
-
-        if (State.AwaitingGiveCard && !prevAwaitGive)
-            OnAwaitingGiveCard?.Invoke(State.GiveByPlayer);
-
-        OnCommandApplied?.Invoke(cmd.Type, prevTurn);
-
-        SyncViews();
-        MaybePromptAI();
+    public void SubmitGiveOutOfTurn(int giverSide, SlotRef slot)
+    {
+        if (State == null || State.IsTerminal) return;
+        var pre = Capture();
+        Commit(State.Apply(GameCommand.Give(slot)), pre, CommandType.GiveCard, giverSide);
     }
 
     private void DispatchEffect(GameEffect fx)
@@ -220,6 +257,8 @@ public class GameManager : MonoBehaviour
     /// <summary>Make every slot view match the truth: visible iff it holds a card. Clears arming.</summary>
     private void SyncViews()
     {
+        Player?.ClearArmed(); 
+        
         Reconcile(playerSlots, GameState.PlayerSide, Zone.Hand);
         Reconcile(aiSlots, GameState.AISide, Zone.Hand);
         Reconcile(playerPenaltySlots, GameState.PlayerSide, Zone.Penalty);
@@ -241,30 +280,69 @@ public class GameManager : MonoBehaviour
     private void MaybePromptAI()
     {
         if (State.IsTerminal || State.IsPlayerTurn) return;
+        if (State.AwaitingGiveCard && State.GiveByPlayer) return; // human owes a give from an out-of-turn snap
         if (!IsDecisionPhase(State.Phase)) return;
-
+        if (_aiRoutineActive) return;
+        
+        
         StartCoroutine(RunAiTurn());
+
+    }
+    
+    private void MaybePromptAiSnap()
+    {
+        if (State == null || State.IsTerminal || !State.IsPlayerTurn) return;
+        if (State.Phase != GamePhase.DrawingCard || State.AwaitingGiveCard) return;
+        if (_aiRoutineActive) return;
+        if (_ai is AICambioAgent agent)
+        {
+            SlotRef s = agent.SnapOwn(State);
+            if (!s.IsNone) StartCoroutine(AiSnapRoutine(s));
+        }
+    }
+
+    private IEnumerator AiSnapRoutine(SlotRef s)
+    {
+        _aiRoutineActive = true;
+        yield return new WaitForSeconds(aiThinkSeconds);
+        _aiRoutineActive = false;
+        if (State.IsTerminal || State.Phase != GamePhase.DrawingCard || State.AwaitingGiveCard) yield break;
+        SubmitSnap(GameState.AISide, s);
     }
 
     private static bool IsDecisionPhase(GamePhase p) =>
         p == GamePhase.DrawingCard || p == GamePhase.CardDrawn ||
         p == GamePhase.SelectingSwapSlot || p == GamePhase.UsingPower;
 
+    // ReSharper disable Unity.PerformanceAnalysis
     /// <summary>Drives the AI's decision as a coroutine. The search itself runs in one
     /// shot (no mid-search reporting), so this mainly exists to keep the IAgent contract
     /// uniform and to let aiThinkSeconds pace the reveal after the move is decided.</summary>
     private IEnumerator RunAiTurn()
     {
+        _aiRoutineActive = true;
+        
         GameCommand chosen = default;
         bool done = false;
 
         IEnumerator routine = _ai.ChooseMoveRoutine(State, cmd => { chosen = cmd; done = true; });
         while (routine.MoveNext())
+        {
             yield return routine.Current;
-
+        }
+            
+        yield return new WaitForSeconds(aiThinkSeconds);
+        _aiRoutineActive = false;
+        
         if (!done) yield break; // shouldn't happen, but never submit garbage
 
-        yield return new WaitForSeconds(aiThinkSeconds);
+        if (!done || State.IsTerminal || State.IsPlayerTurn) yield break;
+        if (State.AwaitingGiveCard && State.GiveByPlayer) yield break;      // human still owes a give
+        if (!State.LegalMoves().Contains(chosen))
+        {
+            MaybePromptAI(); yield break;
+        } // state changed under us
+
         SubmitAI(chosen);
     }
 

@@ -3,23 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-// ============================================================================
-// ISMCTS agent for Cambio.
-//
-// One decision = RunSearch:
-//  for each iteration:
-//     Determinize()  -> sample one full world consistent with what the AI knows
-//     SimulateOnce() -> select / expand / evaluate / backprop on the shared tree
-//   MostVisited()    -> play the root child that was visited most.
-//
-// Reward is always stored from the AI's point of view (1 = AI wins). The opponent
-// flips it in UCB so it minimises the AI's reward.
-//
-// The belief layer (CardBeliefs) is intentionally thin: it only tracks cards the AI
-// is certain of. Hidden cards are sampled UNIFORMLY for now. The Bayesian layer will
-// replace that uniform sampling — see the TODO in Determinize.
-// ============================================================================
-
 public sealed class Node
 {
     public readonly GameCommand Action;
@@ -30,6 +13,7 @@ public sealed class Node
     public int visits;
     public int avail;
     public double reward;
+    
 
     public double AvgReward => visits > 0 ? reward / visits : 0.0;
 
@@ -65,6 +49,7 @@ public class IsmctsReport
     public List<MoveStat> Moves;   // sorted by visits desc
     public bool IsFinal;
 }
+
 
 /// <summary>
 /// Leveled console logging for the search. 0 off, 1 per-decision summary, 2 + expansions
@@ -104,6 +89,9 @@ public class AICambioAgent : IAgent
 
     // On a belief/pool inconsistency, skip that determinization instead of crashing the turn.
     public bool ValidateDeterminizations = true;
+    
+    // switch from using or not bayerisan
+    public bool UseBayesianLayer = true;
 
     public bool DebugLogging { get => MctsDebug.Enabled; set => MctsDebug.Enabled = value; }
     public int DebugVerbosity { get => MctsDebug.Verbosity; set => MctsDebug.Verbosity = value; }
@@ -116,13 +104,14 @@ public class AICambioAgent : IAgent
     private int _failedDeterminizations;
 
     public event Action<IsmctsReport> OnSearchDecision;
-
+    public event Action<BeliefReport> OnBeliefSnapshot;
     public AICambioAgent(int seed)
     {
         RandomSeed = seed;
         _rng = new Random(seed);
     }
 
+    public double UnknownOwnPrior = 5.889;
     // ---------------------------------------------------------------- IAgent
 
     public void OnNewGame(int mySide, GameState initialState)
@@ -150,7 +139,11 @@ public class AICambioAgent : IAgent
     {
         var legal = LegalForSearch(publicState);
         if (legal.Count == 0) return default;
-        if (legal.Count == 1) return legal[0];
+        if (legal.Count == 1)
+        {
+            OnBeliefSnapshot?.Invoke(BuildBeliefReport(publicState, legal[0])); 
+            return legal[0];
+        }
 
         var root = NewRoot();
         var sw = MctsDebug.At(1) ? System.Diagnostics.Stopwatch.StartNew() : null;
@@ -160,6 +153,8 @@ public class AICambioAgent : IAgent
 
         var chosen = MostVisited(root, legal);
         if (sw != null) { sw.Stop(); LogTreeSummary(root, legal, chosen, sw.ElapsedMilliseconds); }
+
+        OnBeliefSnapshot?.Invoke(BuildBeliefReport(publicState, chosen));         
         return chosen;
     }
 
@@ -168,7 +163,9 @@ public class AICambioAgent : IAgent
         var legal = LegalForSearch(publicState);
         if (legal.Count <= 1)
         {
-            onDecided(legal.Count == 1 ? legal[0] : default);
+            var only = legal.Count == 1 ? legal[0] : default;
+            OnBeliefSnapshot?.Invoke(BuildBeliefReport(publicState, only));   
+            onDecided(only);
             yield break;
         }
 
@@ -187,6 +184,7 @@ public class AICambioAgent : IAgent
         OnSearchDecision?.Invoke(BuildReport(root, legal, sw.ElapsedMilliseconds, Iterations, chosen));
         if (MctsDebug.At(1)) LogTreeSummary(root, legal, chosen, sw.ElapsedMilliseconds);
 
+        OnBeliefSnapshot?.Invoke(BuildBeliefReport(publicState, chosen));  
         onDecided(chosen);
     }
 
@@ -243,14 +241,12 @@ public class AICambioAgent : IAgent
             if (_beliefs.Known.TryGetValue(slot, out var c)) score += c.Value;
             else unknown++;
         }
-        return score + unknown * 5.0;   // assume ~5 per unknown own card
+        return score + unknown * UnknownOwnPrior;
     }
 
-    /// <summary>
-    /// One fully specified world consistent with the AI's knowledge: clone the public state,
-    /// fill every hidden slot and the draw pile with a uniform sample of unseen cards.
-    /// Returns null (search skips the iteration) if beliefs and the deck don't reconcile.
-    /// </summary>
+    public double CambioShift = 0.25;
+    private readonly double[] _ew = new double[12]; 
+
     private GameState Determinize(GameState publicState, int iteration)
     {
         GameState world = publicState.Clone(RandomSeed + iteration);
@@ -268,9 +264,8 @@ public class AICambioAgent : IAgent
             return null;
         }
 
-        Shuffle(pool);
-        world.OverwriteHidden(hidden, pool.GetRange(0, hidden.Count));
-        world.SetDrawPile(pool.GetRange(hidden.Count, pool.Count - hidden.Count));
+        bool oppCambio = world.CambioCalled && world.PlayerCalledCambio;   
+        AssignHidden(world, hidden, pool, oppCambio);
 
         if (ValidateDeterminizations && !world.IsCardSetWorking())
         {
@@ -380,7 +375,8 @@ public class AICambioAgent : IAgent
     }
 
     private const double EvalTempo = 8.0;         // softness of the tanh
-    private const double EvalTargetScore = 14.0;  // AI hand score we treat as "fine"
+    private const double EvalTargetScore = 14.0;  // AI hand score we treat as ok
+    private const double PenaltyAversion = 0.05;
 
     private double Evaluate(GameState world)
     {
@@ -388,18 +384,22 @@ public class AICambioAgent : IAgent
         {
             int w = world.WinnerSide();
             if (w == GameState.AISide) return 1.0;
-            if (w < 0) return 0.5;   // draw
+            if (w < 0) return 0.5;
             return 0.0;
         }
 
-        // Non-terminal leaf: blend (a) am I ahead of the opponent with (b) is my own hand
-        // low in absolute terms. (b) makes the search prefer improving its hand over ending
-        // the game at an even position.
-        int ai = world.Score(GameState.AISide);
+        int ai  = world.Score(GameState.AISide);
         int opp = world.Score(GameState.OpponentOf(GameState.AISide));
         double rel = 0.5 + 0.5 * Math.Tanh((opp - ai) / EvalTempo);
         double abs = 0.5 - 0.5 * Math.Tanh((ai - EvalTargetScore) / EvalTempo);
-        return 0.5 * rel + 0.5 * abs;
+
+        // Linear, un-saturated cost for penalty cards the AI is carrying.
+        double aiPenalty = 0;
+        foreach (var s in world.GetActiveSlots(GameState.AISide))
+            if (s.Zone == Zone.Penalty) aiPenalty += world.GetCard(s).Value;
+
+        double blended = 0.5 * rel + 0.5 * abs - PenaltyAversion * aiPenalty;
+        return blended < 0 ? 0 : blended > 1 ? 1 : blended;
     }
 
     private void Shuffle(List<int> list)
@@ -462,7 +462,65 @@ public class AICambioAgent : IAgent
             IsFinal = true
         };
     }
+    
+    private BeliefReport BuildBeliefReport(GameState pub, GameCommand chosen)
+    {
+        int oppSide = GameState.OpponentOf(_mySide);
 
+        // Match how EffTilt is called elsewhere: "has the OPPONENT called cambio".
+        bool oppCambio = pub.CambioCalled &&
+                         (oppSide == GameState.PlayerSide ? pub.PlayerCalledCambio
+                                                          : !pub.PlayerCalledCambio);
+
+        var rows = new List<BeliefSlotRow>();
+        int knownOwn = 0, knownOpp = 0, hidden = 0;
+
+        foreach (int side in new[] { GameState.PlayerSide, GameState.AISide })
+        {
+            foreach (var slot in pub.GetActiveSlots(side))
+            {
+                bool known = _beliefs.Known.ContainsKey(slot);
+                if (known) { if (side == _mySide) knownOwn++; else knownOpp++; }
+                else hidden++;
+
+                Card truth = pub.GetCard(slot);
+                rows.Add(new BeliefSlotRow
+                {
+                    Slot       = slot,
+                    IsOpponent = side != _mySide,
+                    Known      = known,
+                    OppKnows   = _beliefs.OppKnows(slot),
+                    TiltRaw    = _beliefs.TiltFor(slot),
+                    TiltEff    = EffTilt(slot, oppSide, oppCambio),
+                    TrueValue  = truth.Value,
+                    TrueNumber = truth.Number
+                });
+            }
+        }
+
+        return new BeliefReport
+        {
+            Side   = _mySide,
+            Phase  = pub.Phase,
+            Step   = pub.PowerStep,
+            Chosen = chosen,
+            BayesianOn = UseBayesianLayer,
+
+            BelievedOwnScore = BelievedOwnScore(pub),
+            ActualOwnScore   = pub.Score(_mySide),
+            ActualOppScore   = pub.Score(oppSide),
+
+            OppGlobalTilt = _beliefs.OppGlobalTilt,
+            OppTurnCount  = _beliefs.OppTurnCount,
+
+            HiddenCount   = hidden,
+            KnownOwnCount = knownOwn,
+            KnownOppCount = knownOpp,
+
+            Slots = rows
+        };
+    }
+    
     private void LogTreeSummary(Node root, List<GameCommand> legalAtRoot, GameCommand chosen, long elapsedMs)
     {
         var entries = new List<Node>();
@@ -484,6 +542,80 @@ public class AICambioAgent : IAgent
 
         UnityEngine.Debug.Log(sb.ToString());
     }
+    
+    public SlotRef SnapOwn(GameState pub)
+    {
+        Card top = pub.TopDiscard;
+        if (top.IsNone) return SlotRef.None;
+        foreach (var kv in _beliefs.Known)
+        {
+            if (kv.Key.Side != _mySide) continue;
+            if (!pub.IsActive(kv.Key)) continue;
+            if (kv.Value.Number == top.Number) return kv.Key;
+        }
+        return SlotRef.None;
+    }
+    
+    private double EffTilt(SlotRef s, int oppSide, bool oppCambio)
+    {
+        if (!UseBayesianLayer) return 0.0;
+        
+        double t = _beliefs.TiltFor(s);
+        if (oppCambio && s.Side == oppSide) t += CambioShift;
+        return t;
+    }
+
+    private static int ValueIdx(int cardId) => new Card(cardId).Value + 1;   // -1..10 -> 0..11
+
+    /// <summary>Belief-weighted assignment of hidden slots to distinct pool cards
+    /// (weighted sampling without replacement), remainder becomes the draw pile.</summary>
+    private void AssignHidden(GameState world, List<SlotRef> hidden, List<int> pool, bool oppCambio)
+    {
+        int oppSide = GameState.OpponentOf(_mySide);
+
+        // Peaky slots pick from the full pool first: reduces the sequential-WOR bias.
+        hidden.Sort((a, b) =>
+            Math.Abs(EffTilt(b, oppSide, oppCambio)).CompareTo(
+                Math.Abs(EffTilt(a, oppSide, oppCambio))));
+
+        var assigned = new int[hidden.Count];
+
+        for (int k = 0; k < hidden.Count; k++)
+        {
+            double theta = EffTilt(hidden[k], oppSide, oppCambio);
+            int pick;
+
+            if (theta == 0.0 || pool.Count == 1)
+            {
+                pick = _rng.Next(pool.Count);                       // uniform fast path
+            }
+            else
+            {
+                for (int v = -1; v <= 10; v++) _ew[v + 1] = Math.Exp(-theta * v);
+
+                double total = 0;
+                for (int i = 0; i < pool.Count; i++) total += _ew[ValueIdx(pool[i])];
+
+                double r = _rng.NextDouble() * total, acc = 0;
+                pick = pool.Count - 1;
+                for (int i = 0; i < pool.Count; i++)
+                {
+                    acc += _ew[ValueIdx(pool[i])];
+                    if (r <= acc) { pick = i; break; }
+                }
+            }
+
+            assigned[k] = pool[pick];
+            int last = pool.Count - 1;                              // O(1) swap-remove
+            pool[pick] = pool[last];
+            pool.RemoveAt(last);
+        }
+
+        world.OverwriteHidden(hidden, assigned);
+        Shuffle(pool);                                             // draw pile: genuinely uninformed
+        world.SetDrawPile(pool);
+    }
+    
 }
 
 /// <summary>
@@ -496,14 +628,53 @@ public class CardBeliefs
     private readonly int _mySide;
     private readonly int _handSize;
     private readonly int _penaltySize;
+    
+    
+    // 0.03
+    // 6
+    // 0.10
+    // 0.02
+    // 0.02
+    // 6.0
+    // 0.6
+    
+
+    public double KeepAlpha      = 0.03;   // per surviving opp turn, known-and-kept slot
+    public int    KeepTurnCap    = 6;
+    public double SwapInBase     = 0.10;   // base low-tilt when opp keeps a hidden draw
+    public double DisplacedAlpha = 0.02;   // per point of the card they threw away
+    public double DiscardAlpha   = 0.02;   // per point below typical of a plain discard
+    public double TypicalValue   = 6.0;    // ~pool mean
+    public double GlobalCap      = 0.6;   // clamp on accumulated global shift
+
+
+    private readonly int _oppSide;
+    private readonly Dictionary<SlotRef, double> _tilt = new();
+    private readonly HashSet<SlotRef> _oppKnows = new();
+    private readonly Dictionary<SlotRef, int> _oppKnownSince = new();
+    private int _oppTurnCount;
+    private double _oppGlobalTilt;
 
     private readonly Dictionary<SlotRef, Card> _known = new();
+    
+    // Stats for graph
+    public double OppGlobalTilt => _oppGlobalTilt;
+    public int    OppTurnCount  => _oppTurnCount;
+    public bool   OppKnows(SlotRef s) => _oppKnows.Contains(s);
 
     public CardBeliefs(int mySide, int handSize, int penaltySize)
     {
         _mySide = mySide;
         _handSize = handSize;
         _penaltySize = penaltySize;
+        _oppSide = GameState.OpponentOf(mySide);
+        var o0 = new SlotRef(_oppSide, Zone.Hand, 0);
+        var o1 = new SlotRef(_oppSide, Zone.Hand, 1);
+        _oppKnows.Add(o0); _oppKnownSince[o0] = 0;
+        if (handSize > 1)
+        {
+            _oppKnows.Add(o1); _oppKnownSince[o1] = 0;
+        }
     }
 
     public IReadOnlyDictionary<SlotRef, Card> Known => _known;
@@ -528,9 +699,15 @@ public class CardBeliefs
     {
         switch (effect.Kind)
         {
+            case EffectKind.CardDrawn:
+                if (!iAmActor)
+                {
+                    _oppTurnCount++;
+                }
+                break;
+            
             case EffectKind.SlotRevealed:
-                // Only learn it if WE looked (LookOwn / LookOpponent). Never read the card
-                // when the opponent peeks — that would be cheating.
+                // Only learn it if WE looked (LookOwn / LookOpponent)
                 if (iAmActor) SetKnow(effect.Slot, effect.Card);
                 break;
 
@@ -538,26 +715,65 @@ public class CardBeliefs
                 if (effect.Slot2.IsNone)
                 {
                     // Swap-drawn-into-slot: single slot changed.
-                    if (iAmActor) SetKnow(effect.Slot, effect.Card);   // we know what we placed
-                    else _known.Remove(effect.Slot);                   // opponent replaced it with an unknown
+                    if (iAmActor)
+                    {
+                        SetKnow(effect.Slot, effect.Card);   // we know what we placed
+                        ClearSlotMeta(effect.Slot);
+                    }
+                    else
+                    {
+                        _known.Remove(effect.Slot);
+                        ClearSlotMeta(effect.Slot);
+                        _tilt[effect.Slot] = SwapInBase + DisplacedAlpha * effect.Card2.Value;
+                    }
                 }
                 else
                 {
                     SwapKnow(effect.Slot, effect.Slot2);
+                    SwapTilt(effect.Slot, effect.Slot2);
                 }
                 break;
 
             case EffectKind.MatchResolved:
                 if (effect.Slot.IsNone) break;                         // drawn-card match, no slot
-                if (effect.Success) _known.Remove(effect.Slot);        // card left the slot
-                else SetKnow(effect.Slot, effect.Card);                // failed match reveals it to everyone
+                    
+                if (effect.Success)
+                {
+                    _known.Remove(effect.Slot);        // card left the slot
+                    ClearSlotMeta(effect.Slot);
+                }
+                else 
+                {
+                    SetKnow(effect.Slot, effect.Card);                // failed match reveals it to everyone
+                }
+                
                 break;
+            
+            case EffectKind.DrawnDiscarded:
 
+                if (!iAmActor)
+                {
+                    var excess = TypicalValue - effect.Card.Value;   // low discard = strong signal
+
+                    if (excess > 0)
+                    {
+                        _oppGlobalTilt += DiscardAlpha * excess;
+                        if (_oppGlobalTilt > GlobalCap)
+                        {
+                            _oppGlobalTilt = GlobalCap;
+                        }
+                    }
+                }
+                
+                break;
+            
             case EffectKind.InformedTradeReady:
                 if (iAmActor)
                 {
                     SetKnow(effect.Slot, effect.Card);                 // opponent slot we looked at
                     SetKnow(effect.Slot2, effect.Card2);               // own slot
+                    ClearSlotMeta(effect.Slot);
+                    ClearSlotMeta(effect.Slot2);
                 }
                 break;
         }
@@ -581,4 +797,41 @@ public class CardBeliefs
             if (world.IsActive(kv.Key)) ids.Add(kv.Value.Id);
         return ids;
     }
+    
+    public double TiltFor(SlotRef s)
+    {
+        double theta = _tilt.TryGetValue(s, out var t) ? t : 0.0;
+        if (s.Side == _oppSide) theta += _oppGlobalTilt;
+
+        if (_oppKnows.Contains(s) && _oppKnownSince.TryGetValue(s, out var since))
+        {
+            int survived = _oppTurnCount - since;
+            if (survived > KeepTurnCap) survived = KeepTurnCap;
+            if (survived > 0) theta += KeepAlpha * survived;
+        }
+        return theta;
+    }
+    
+    private void ClearSlotMeta(SlotRef s)
+    {
+        _tilt.Remove(s);
+        _oppKnows.Remove(s);
+        _oppKnownSince.Remove(s);
+    }
+
+    private void SwapTilt(SlotRef a, SlotRef b)
+    {
+        bool hasA = _tilt.TryGetValue(a, out var ta);
+        bool hasB = _tilt.TryGetValue(b, out var tb);
+        if (hasB) _tilt[a] = tb; else _tilt.Remove(a);
+        if (hasA) _tilt[b] = ta; else _tilt.Remove(b);
+
+        bool ka = _oppKnows.Contains(a), kb = _oppKnows.Contains(b);
+        _oppKnownSince.TryGetValue(a, out var sa);
+        _oppKnownSince.TryGetValue(b, out var sb);
+        if (kb) { _oppKnows.Add(a); _oppKnownSince[a] = sb; } else ClearOppKnown(a);
+        if (ka) { _oppKnows.Add(b); _oppKnownSince[b] = sa; } else ClearOppKnown(b);
+    }
+    private void ClearOppKnown(SlotRef s) { _oppKnows.Remove(s); _oppKnownSince.Remove(s); }
 }
+

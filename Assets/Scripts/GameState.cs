@@ -8,7 +8,6 @@ public enum GamePhase
     DrawingCard,
     CardDrawn,
     SelectingSwapSlot,
-    DiscardingDrawn,   // transient (never rests here)
     UsingPower,
     CambioCalled,      // transient
     GameOver
@@ -36,6 +35,7 @@ public enum EffectKind
     SlotsSwapped,        // Slot = a, Slot2 = b (Slot2 = None for a one-slot change)
     GiveDone,
     InformedTradeReady,  // Card = opponent card, Card2 = own card
+    DrawnDiscarded, // Card = discarded draw, Success = actorIsPlayer
     GameOver
 }
 
@@ -92,6 +92,7 @@ public class GameState
     private bool _matchedThisTurn;
     private bool _awaitingGiveCard;
     private SlotRef _matchReceiver;      // opponent slot the giver must fill
+    private int _giverSide = -1; // for matching in opponents turn
     private bool _awaitingPeekConfirm;   // a look-power peeked; only FinishPeeking is legal now
 
     private SlotRef _powerSource;
@@ -112,7 +113,8 @@ public class GameState
     public bool PlayerCalledCambio => _cambioCallerSide == PlayerSide;
     public int FinalRoundTurnsLeft => _finalRoundTurnsLeft;
     public bool AwaitingGiveCard => _awaitingGiveCard;
-    public bool GiveByPlayer => _isPlayerTurn; // matcher is always the active side in this ruleset
+    public int  GiverSide    => _giverSide >= 0 ? _giverSide : ActiveSide;
+    public bool GiveByPlayer => GiverSide == PlayerSide;
     public bool AwaitingPeekConfirm => _awaitingPeekConfirm;
     public bool MatchedThisTurn => _matchedThisTurn;
     public bool IsTerminal => _phase == GamePhase.GameOver;
@@ -145,6 +147,7 @@ public class GameState
         _drawn = Card.None;
         _powerStep = PowerStep.None;
         _matchReceiver = SlotRef.None;
+        _giverSide = -1;
         _powerSource = SlotRef.None;
         _tradeOpponent = SlotRef.None;
         _tradeOwn = SlotRef.None;
@@ -188,6 +191,7 @@ public class GameState
             _matchedThisTurn = _matchedThisTurn,
             _awaitingGiveCard = _awaitingGiveCard,
             _matchReceiver = _matchReceiver,
+            _giverSide = _giverSide,
             _awaitingPeekConfirm = _awaitingPeekConfirm,
             _powerSource = _powerSource,
             _tradeOpponent = _tradeOpponent,
@@ -237,13 +241,13 @@ public class GameState
             case GamePhase.DrawingCard:
                 if (_awaitingGiveCard)
                 {
-                    foreach (var s in ActiveSlotsOf(ActiveSide))
+                    int giver = _giverSide >= 0 ? _giverSide : ActiveSide;
+                    foreach (var s in ActiveSlotsOf(giver))
                         moves.Add(GameCommand.Give(s));
                 }
                 else
                 {
                     if (CanDraw()) moves.Add(GameCommand.DrawFromDeck());
-                    if (_discard.Count > 0) moves.Add(GameCommand.DrawFromDiscard());
                     if (!_cambioCalled) moves.Add(GameCommand.CallCambio());
                     if (!_matchedThisTurn && _discard.Count > 0)
                     {
@@ -301,8 +305,7 @@ public class GameState
         var fx = new List<GameEffect>();
         bool ok = cmd.Type switch
         {
-            CommandType.DrawFromDeck      => DoDraw(fromDiscard: false, fx),
-            CommandType.DrawFromDiscard   => DoDraw(fromDiscard: true, fx),
+            CommandType.DrawFromDeck      => DoDraw(fx),
             CommandType.DiscardDrawn      => DoDiscardDrawn(fx),
             CommandType.SwapDrawnIntoSlot => DoSwapDrawn(cmd.Slot, fx),
             CommandType.UsePowerOnSlot    => DoUsePower(cmd.Slot, fx),
@@ -316,11 +319,11 @@ public class GameState
         return new MoveResult { Ok = ok, Effects = fx };
     }
 
-    private bool DoDraw(bool fromDiscard, List<GameEffect> fx)
+    private bool DoDraw(List<GameEffect> fx)
     {
         if (_phase != GamePhase.DrawingCard || _awaitingGiveCard) return false;
 
-        Card card = fromDiscard ? DrawFromDiscard() : DrawCard();
+        Card card = DrawCard();
         if (card.IsNone) return false;
 
         _drawn = card;
@@ -361,13 +364,22 @@ public class GameState
             EndTurn(fx);
             return true;
         }
-
-        Discard(_drawn);
-        _activePower = _drawn.Power;
+        
+        Card discarded = _drawn;
+        Discard(discarded);
+        _activePower = discarded.Power;
         _drawn = Card.None;
+
+        fx.Add(new GameEffect
+        {
+            Kind = EffectKind.DrawnDiscarded,
+            Card = discarded,
+            Success = _isPlayerTurn
+        });
 
         if (_activePower != CardPower.None) BeginPower(_activePower);
         else EndTurn(fx);
+
         return true;
     }
 
@@ -388,7 +400,8 @@ public class GameState
             Kind = EffectKind.SlotsSwapped,
             Slot = s,
             Slot2 = SlotRef.None,
-            Card = placed
+            Card = placed,
+            Card2 = displaced,
         });
 
         EndTurn(fx);
@@ -462,8 +475,7 @@ public class GameState
 
         if (!success)
         {
-            // Failed match just adds a penalty; the match flag is NOT consumed, so another
-            // attempt is technically still legal this turn.
+            _matchedThisTurn = true;
             ApplyPenalty(ActiveSide, fx);
             fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Success = false, ByPlayer = _isPlayerTurn });
             return true;
@@ -479,6 +491,7 @@ public class GameState
         {
             // Matched an opponent card -> you must hand one of yours into the gap.
             _awaitingGiveCard = true;
+            _giverSide = ActiveSide;
             _matchReceiver = s;
         }
         return true;
@@ -487,7 +500,8 @@ public class GameState
     private bool DoGiveCard(SlotRef s, List<GameEffect> fx)
     {
         if (!_awaitingGiveCard) return false;
-        if (s.Side != ActiveSide || !IsActive(s)) return false;
+        int giver = _giverSide >= 0 ? _giverSide : ActiveSide;
+        if (s.Side != giver || !IsActive(s)) return false;
 
         Card given = GetCard(s);
         SetCard(s, Card.None);
@@ -496,10 +510,12 @@ public class GameState
         var receiver = _matchReceiver;
         _awaitingGiveCard = false;
         _matchReceiver = SlotRef.None;
+        _giverSide = -1;
 
         fx.Add(new GameEffect { Kind = EffectKind.SlotsSwapped, Slot = s, Slot2 = receiver });
         fx.Add(new GameEffect { Kind = EffectKind.GiveDone });
-        // No EndTurn: the active player must still draw this turn.
+        
+        
         return true;
     }
 
@@ -628,14 +644,7 @@ public class GameState
     }
 
     private Card DrawCard() => DrawNoReshuffle();
-
-    private Card DrawFromDiscard()
-    {
-        if (_discard.Count == 0) return Card.None;
-        Card c = _discard[_discard.Count - 1];
-        _discard.RemoveAt(_discard.Count - 1);
-        return c;
-    }
+    
 
     private void Discard(Card c)
     {
@@ -708,5 +717,38 @@ public class GameState
         Mark(_drawn);
 
         return ok && seen.Count == Card.DeckSize;
+    }
+    
+    public MoveResult TrySnap(int snapperSide, SlotRef s)
+    {
+        var fx = new List<GameEffect>();
+
+        if (_phase != GamePhase.DrawingCard || _awaitingGiveCard) return new MoveResult { Ok = false, Effects = fx };
+        if (!IsActive(s)) return new MoveResult { Ok = false, Effects = fx };
+        Card top = TopDiscard;
+        if (top.IsNone) return new MoveResult { Ok = false, Effects = fx };
+
+        Card c = GetCard(s);
+        bool success = c.Number == top.Number;
+
+        if (!success)
+        {
+            ApplyPenalty(snapperSide, fx);
+            fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Success = false, ByPlayer = snapperSide == PlayerSide });
+            return new MoveResult { Ok = true, Effects = fx };
+        }
+
+        bool snappersOwn = s.Side == snapperSide;
+        Discard(c);
+        SetCard(s, Card.None);
+        fx.Add(new GameEffect { Kind = EffectKind.MatchResolved, Slot = s, Card = c, Success = true, ByPlayer = snapperSide == PlayerSide });
+
+        if (!snappersOwn)
+        {
+            _awaitingGiveCard = true;
+            _giverSide = snapperSide;
+            _matchReceiver = s;
+        }
+        return new MoveResult { Ok = true, Effects = fx };
     }
 }
