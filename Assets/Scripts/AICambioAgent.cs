@@ -214,7 +214,18 @@ public class AICambioAgent : IAgent
         if (UseCambioGuard && legal.Count > 1 && BelievedOwnScore(state) > CambioGuardScore)
         {
             var filtered = legal.Where(m => m.Type != CommandType.CallCambio).ToList();
-            if (filtered.Count > 0) legal = filtered;   // never filter down to zero moves
+            if (filtered.Count > 0) legal = filtered;
+        }
+
+        if (legal.Count > 1)
+        {
+            Card top = state.TopDiscard;
+            var filtered = legal.Where(m =>
+                m.Type != CommandType.AttemptMatch ||               
+                (!top.IsNone &&
+                 _beliefs.Known.TryGetValue(m.Slot, out var c) &&   
+                 c.Number == top.Number)).ToList();                 
+            if (filtered.Count > 0) legal = filtered;
         }
 
         if (MctsDebug.At(1))
