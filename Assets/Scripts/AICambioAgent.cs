@@ -1,7 +1,7 @@
+using System.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 public sealed class Node
 {
@@ -84,13 +84,23 @@ public class AICambioAgent : IAgent
     public int IterationsPerYield = 0;
 
     // Drop CallCambio from the root move set while we believe our own hand is still too high.
+    // Baseline (Bayesian off) uses this absolute own-score cap. The Bayesian path ignores it
+    // and instead compares believed own vs opponent score distributions (see below).
     public int CambioGuardScore = 10;
     public bool UseCambioGuard = true;
+
+    // --- Bayesian Cambio guard (only used when UseBayesianLayer is true) ---
+    // We permit CallCambio only when we believe we finish ahead by at least CambioMargin points,
+    // with probability >= CambioConfidence. Calling ends our turn and hands the opponent exactly
+    // one more turn, so CambioMargin also absorbs the improvement a competent opponent squeezes
+    // from that final draw (don't call when only marginally ahead — they can catch up).
+    public double CambioMargin     = 2.0;   // points of believed lead required (own < opp - margin)
+    public double CambioConfidence = 0.60;  // P(we're ahead by the margin) needed to allow the call
 
     // On a belief/pool inconsistency, skip that determinization instead of crashing the turn.
     public bool ValidateDeterminizations = true;
     
-    // switch from using or not bayerisan
+    // switch from using or not the belief layer (baseline = uniform determinizer)
     public bool UseBayesianLayer = true;
 
     public bool DebugLogging { get => MctsDebug.Enabled; set => MctsDebug.Enabled = value; }
@@ -100,6 +110,12 @@ public class AICambioAgent : IAgent
     private readonly Random _rng;
     private CardBeliefs _beliefs;
 
+    
+    // Stats for graphs
+    
+    private bool   _guardEvaluated;
+    private double _guardMeanOwn, _guardMeanOpp, _guardPAhead;
+    
     private int _nodesExpandedThisSearch;
     private int _failedDeterminizations;
 
@@ -204,32 +220,111 @@ public class AICambioAgent : IAgent
         SimulateOnce(world, root, i);
     }
 
-    /// <summary>Legal moves at the root, minus a too-early Cambio if the guard is on.</summary>
+    /// <summary>Legal moves at the root, minus a too-early Cambio if the guard forbids it.
+    /// Baseline uses the absolute own-score cap; the Bayesian layer uses a relative
+    /// own-vs-opponent score-distribution test (see BayesianCambioOk).</summary>
     private List<GameCommand> LegalForSearch(GameState state)
     {
+        _guardEvaluated = false; 
         var legal = state.LegalMoves();
 
-        if (UseCambioGuard && legal.Count > 1 && BelievedOwnScore(state) > CambioGuardScore)
+        // Only pay for the guard when CallCambio is actually on the table this decision.
+        if (UseCambioGuard && legal.Count > 1)
         {
-            var filtered = legal.Where(m => m.Type != CommandType.CallCambio).ToList();
-            if (filtered.Count > 0) legal = filtered;
+            bool hasCambio = false;
+            for (int i = 0; i < legal.Count; i++)
+                if (legal[i].Type == CommandType.CallCambio) { hasCambio = true; break; }
+
+            if (hasCambio)
+            {
+                bool allowCambio = UseBayesianLayer
+                    ? BayesianCambioOk(state)                       // relative, distribution-based
+                    : BelievedOwnScore(state) <= CambioGuardScore;  // old absolute cap (baseline)
+
+                if (!allowCambio)
+                {
+                    var filtered = legal.Where(m => m.Type != CommandType.CallCambio).ToList();
+                    if (filtered.Count > 0) legal = filtered;       // never filter down to zero moves
+                }
+            }
         }
 
-        if (legal.Count > 1)
+        /*if (legal.Count > 1)   // This removes blind-matching
         {
             Card top = state.TopDiscard;
             var filtered = legal.Where(m =>
-                m.Type != CommandType.AttemptMatch ||               
+                m.Type != CommandType.AttemptMatch ||              
                 (!top.IsNone &&
                  _beliefs.Known.TryGetValue(m.Slot, out var c) &&   
                  c.Number == top.Number)).ToList();                 
             if (filtered.Count > 0) legal = filtered;
         }
-
+        */
+        
         if (MctsDebug.At(1))
             MctsDebug.Log(1, $"ChooseMove: side={_mySide} phase={state.Phase} powerStep={state.PowerStep} " +
                              $"legal={legal.Count} known={_beliefs?.Known.Count ?? 0}");
         return legal;
+    }
+
+    /// <summary>Distribution-based Cambio guard. Estimates believed own and opponent END scores
+    /// under the same deck-coherent posterior, treats their difference D = own - opp as
+    /// Normal(E[own]-E[opp], Var[own]+Var[opp]) (independence across the two hands is a
+    /// mean-field approximation), and permits the call only when
+    ///   P(D &lt; -CambioMargin) >= CambioConfidence.
+    /// The margin folds in the opponent's one guaranteed final turn.</summary>
+    private bool BayesianCambioOk(GameState pub)
+    {
+        int oppSide = GameState.OpponentOf(_mySide);
+
+        const bool oppCambio = false;
+
+        PoolHistogram(pub.UnseenCardIds(_beliefs.KnowIds(pub)), _poolHist);
+
+        var (mOwn, vOwn) = BelievedScoreDist(pub, _mySide, oppSide, oppCambio, _poolHist);
+        var (mOpp, vOpp) = BelievedScoreDist(pub, oppSide, oppSide, oppCambio, _poolHist);
+
+        double meanD = mOwn - mOpp; // want this well below zero
+        double sdD = Math.Sqrt(vOwn + vOpp) + 1e-9;
+
+        // P(own - opp < -margin)
+        double pAhead = NormalCdf((-CambioMargin - meanD) / sdD);
+    
+        _guardMeanOwn = mOwn; _guardMeanOpp = mOpp; 
+        _guardPAhead  = pAhead; _guardEvaluated = true; 
+
+    if (MctsDebug.At(1))
+            MctsDebug.Log(1, $"CambioGuard[bayes]: E[own]={mOwn:F2}±{Math.Sqrt(vOwn):F2}  " +
+                             $"E[opp]={mOpp:F2}±{Math.Sqrt(vOpp):F2}  margin={CambioMargin}  " +
+                             $"P(ahead)={pAhead:F3} (need>={CambioConfidence}) -> {(pAhead >= CambioConfidence ? "ALLOW" : "block")}");
+
+        return pAhead >= CambioConfidence;
+    }
+
+    /// <summary>Believed mean and variance of a side's total score. Known slots contribute
+    /// their exact value with zero variance; hidden slots contribute E[value] and Var[value]
+    /// from the deck-coherent posterior P(v) ∝ poolHist[v]·exp(effLogL[v]). With the Bayesian
+    /// layer off both sides' hidden slots fall back to the flat pool posterior (unused here,
+    /// since this is only called on the Bayesian path).</summary>
+    private (double mean, double variance) BelievedScoreDist(
+        GameState pub, int side, int oppSide, bool oppCambio, double[] poolHist)
+    {
+        double mean = 0, variance = 0;
+        foreach (var slot in pub.GetActiveSlots(side))
+        {
+            if (_beliefs.Known.TryGetValue(slot, out var c))
+            {
+                mean += c.Value;                        // certain -> contributes no variance
+            }
+            else
+            {
+                FillEffLogLik(slot, oppSide, oppCambio, _logLbuf);
+                var (m, v) = MomentsOf(_logLbuf, poolHist);
+                mean     += m;
+                variance += v;
+            }
+        }
+        return (mean, variance);
     }
 
     private double BelievedOwnScore(GameState pub)
@@ -244,8 +339,14 @@ public class AICambioAgent : IAgent
         return score + unknown * UnknownOwnPrior;
     }
 
+    // Extra low-lean applied to the opponent's slots once THEY have called cambio: you rarely
+    // call from behind, so their hand is probably low. Applied as a log-linear likelihood
+    // factor exp(-CambioShift * value) on top of whatever CardBeliefs already believes.
     public double CambioShift = 0.25;
-    private readonly double[] _ew = new double[12]; 
+
+    private readonly double[] _ew     = new double[12];  // exp(logL) weight buffer, index = Value+1
+    private readonly double[] _logLbuf = new double[12]; // scratch log-likelihood vector
+    private readonly double[] _poolHist = new double[12];// unseen-pool value histogram (report only)
 
     private GameState Determinize(GameState publicState, int iteration)
     {
@@ -254,7 +355,9 @@ public class AICambioAgent : IAgent
         List<SlotRef> hidden = _beliefs.HiddenSlots(world);
         List<int> known = _beliefs.KnowIds(world);
 
-        // TODO(bayesian): replace this uniform pool with a belief-weighted sample.
+        // The unseen pool IS the Bayesian prior: sampling a hidden slot proportional to
+        // exp(logL(value)) over these cards yields the deck-coherent posterior
+        //   P(value=v) ∝ N_pool(v) · exp(logL(v)).
         List<int> pool = world.UnseenCardIds(known);
 
         if (pool.Count < hidden.Count)
@@ -376,7 +479,7 @@ public class AICambioAgent : IAgent
 
     private const double EvalTempo = 8.0;         // softness of the tanh
     private const double EvalTargetScore = 14.0;  // AI hand score we treat as ok
-    private const double PenaltyAversion = 0.05;
+    private const double PenaltyAversion = 0.3;
 
     private double Evaluate(GameState world)
     {
@@ -467,10 +570,15 @@ public class AICambioAgent : IAgent
     {
         int oppSide = GameState.OpponentOf(_mySide);
 
-        // Match how EffTilt is called elsewhere: "has the OPPONENT called cambio".
+        // Match how the cambio shift is applied elsewhere: "has the OPPONENT called cambio".
         bool oppCambio = pub.CambioCalled &&
                          (oppSide == GameState.PlayerSide ? pub.PlayerCalledCambio
                                                           : !pub.PlayerCalledCambio);
+
+        // Build the current unseen-pool histogram once: it's the shared prior for every
+        // hidden slot, and lets us report the believed MEAN value per slot (E[value]).
+        List<int> poolIds = pub.UnseenCardIds(_beliefs.KnowIds(pub));
+        double poolMean = PoolHistogram(poolIds, _poolHist);
 
         var rows = new List<BeliefSlotRow>();
         int knownOwn = 0, knownOpp = 0, hidden = 0;
@@ -483,6 +591,17 @@ public class AICambioAgent : IAgent
                 if (known) { if (side == _mySide) knownOwn++; else knownOpp++; }
                 else hidden++;
 
+
+                double tiltRaw = 0.0, tiltEff = 0.0;
+                if (!known)
+                {
+                    _beliefs.FillLogLik(slot, _logLbuf);
+                    tiltRaw = poolMean - ExpectedValue(_logLbuf, _poolHist);
+
+                    FillEffLogLik(slot, oppSide, oppCambio, _logLbuf);
+                    tiltEff = poolMean - ExpectedValue(_logLbuf, _poolHist);
+                }
+
                 Card truth = pub.GetCard(slot);
                 rows.Add(new BeliefSlotRow
                 {
@@ -490,8 +609,8 @@ public class AICambioAgent : IAgent
                     IsOpponent = side != _mySide,
                     Known      = known,
                     OppKnows   = _beliefs.OppKnows(slot),
-                    TiltRaw    = _beliefs.TiltFor(slot),
-                    TiltEff    = EffTilt(slot, oppSide, oppCambio),
+                    TiltRaw    = tiltRaw,   // believed-value shift from beliefs alone
+                    TiltEff    = tiltEff,   // believed-value shift the search actually consumed
                     TrueValue  = truth.Value,
                     TrueNumber = truth.Number
                 });
@@ -517,6 +636,10 @@ public class AICambioAgent : IAgent
             KnownOwnCount = knownOwn,
             KnownOppCount = knownOpp,
 
+            GuardEvaluated = _guardEvaluated,   // <-- add these four
+            GuardMeanOwn   = _guardMeanOwn,
+            GuardMeanOpp   = _guardMeanOpp,
+            GuardPAhead    = _guardPAhead,
             Slots = rows
         };
     }
@@ -555,53 +678,134 @@ public class AICambioAgent : IAgent
         }
         return SlotRef.None;
     }
-    
-    private double EffTilt(SlotRef s, int oppSide, bool oppCambio)
+
+    // ---------------------------------------------------------------- Belief -> sampling glue
+
+    /// <summary>Fill a 12-bucket effective log-likelihood vector (index = Card.Value + 1)
+    /// for the given slot — the belief the search should sample from. Baseline (Bayesian
+    /// off) is always flat, which reproduces the old uniform determinizer exactly. The
+    /// cambio nudge lives here (not in CardBeliefs) so it can be toggled with the layer.</summary>
+    private void FillEffLogLik(SlotRef s, int oppSide, bool oppCambio, double[] outLogL)
     {
-        if (!UseBayesianLayer) return 0.0;
-        
-        double t = _beliefs.TiltFor(s);
-        if (oppCambio && s.Side == oppSide) t += CambioShift;
-        return t;
+        if (!UseBayesianLayer) { Array.Clear(outLogL, 0, outLogL.Length); return; }
+
+        _beliefs.FillLogLik(s, outLogL);
+
+        if (oppCambio && s.Side == oppSide)
+            for (int v = -1; v <= 10; v++) outLogL[v + 1] += -CambioShift * v;
     }
 
     private static int ValueIdx(int cardId) => new Card(cardId).Value + 1;   // -1..10 -> 0..11
 
+    private static double Spread(double[] logL)
+    {
+        double mn = double.PositiveInfinity, mx = double.NegativeInfinity;
+        for (int i = 0; i < logL.Length; i++)
+        {
+            if (logL[i] < mn) mn = logL[i];
+            if (logL[i] > mx) mx = logL[i];
+        }
+        return mx - mn;
+    }
+
+    /// <summary>Believed mean and variance of a slot's value under the deck-coherent posterior
+    /// P(v) ∝ poolHist[v] · exp(logL[v]). Values outside the current pool get zero weight, so
+    /// beliefs stay consistent with what is physically left in the deck. A max-subtract keeps
+    /// exp() from under/overflowing for peaked likelihoods.</summary>
+    private static (double mean, double variance) MomentsOf(double[] logL, double[] poolHist)
+    {
+        double maxLog = double.NegativeInfinity;
+        for (int b = 0; b < 12; b++)
+            if (poolHist[b] > 0 && logL[b] > maxLog) maxLog = logL[b];
+        if (double.IsNegativeInfinity(maxLog)) return (0.0, 0.0);   // empty pool
+
+        double num = 0, num2 = 0, den = 0;
+        for (int v = -1; v <= 10; v++)
+        {
+            double w = poolHist[v + 1] * Math.Exp(logL[v + 1] - maxLog);
+            num  += v * w;
+            num2 += (double)v * v * w;
+            den  += w;
+        }
+        if (den <= 0) return (0.0, 0.0);
+        double mean = num / den;
+        double variance = num2 / den - mean * mean;
+        return (mean, variance < 0 ? 0.0 : variance);   // clamp tiny negative from rounding
+    }
+
+    /// <summary>E[value] for a slot; thin wrapper over MomentsOf for telemetry.</summary>
+    private static double ExpectedValue(double[] logL, double[] poolHist) => MomentsOf(logL, poolHist).mean;
+
+    /// <summary>Standard normal CDF (Zelen &amp; Severo / A&amp;S 26.2.17, |error| &lt; 7.5e-8).</summary>
+    private static double NormalCdf(double z)
+    {
+        double t = 1.0 / (1.0 + 0.2316419 * Math.Abs(z));
+        double d = 0.3989422804014327 * Math.Exp(-z * z / 2.0);
+        double p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 +
+                   t * (-1.821255978 + t * 1.330274429))));
+        return z >= 0 ? 1.0 - p : p;
+    }
+
+    private static double PoolHistogram(List<int> pool, double[] hist12)
+    {
+        Array.Clear(hist12, 0, hist12.Length);
+        double sum = 0;
+        foreach (int id in pool)
+        {
+            int val = new Card(id).Value;
+            hist12[val + 1] += 1.0;
+            sum += val;
+        }
+        return pool.Count > 0 ? sum / pool.Count : 0.0;
+    }
+
     /// <summary>Belief-weighted assignment of hidden slots to distinct pool cards
-    /// (weighted sampling without replacement), remainder becomes the draw pile.</summary>
+    /// (weighted sampling without replacement). Each slot draws a pool card with weight
+    /// exp(logL(value)); summed over the pool this reproduces the deck-coherent posterior
+    /// P(v) ∝ N_pool(v)·exp(logL(v)). The leftover pool becomes the (uninformed) draw pile.</summary>
     private void AssignHidden(GameState world, List<SlotRef> hidden, List<int> pool, bool oppCambio)
     {
         int oppSide = GameState.OpponentOf(_mySide);
 
-        // Peaky slots pick from the full pool first: reduces the sequential-WOR bias.
-        hidden.Sort((a, b) =>
-            Math.Abs(EffTilt(b, oppSide, oppCambio)).CompareTo(
-                Math.Abs(EffTilt(a, oppSide, oppCambio))));
+        // Peaky (confident) slots pick from the full pool first: reduces sequential-WOR bias.
+        // Peakiness = spread of the effective log-likelihood; flat slots (no signal) sort last.
+        double PeakOf(SlotRef s) { FillEffLogLik(s, oppSide, oppCambio, _logLbuf); return Spread(_logLbuf); }
+        hidden.Sort((a, b) => PeakOf(b).CompareTo(PeakOf(a)));
 
         var assigned = new int[hidden.Count];
 
         for (int k = 0; k < hidden.Count; k++)
         {
-            double theta = EffTilt(hidden[k], oppSide, oppCambio);
-            int pick;
+            FillEffLogLik(hidden[k], oppSide, oppCambio, _logLbuf);
 
-            if (theta == 0.0 || pool.Count == 1)
+            int pick;
+            if (Spread(_logLbuf) < 1e-9 || pool.Count == 1)
             {
-                pick = _rng.Next(pool.Count);                       // uniform fast path
+                pick = _rng.Next(pool.Count);                       // flat belief -> uniform fast path
             }
             else
             {
-                for (int v = -1; v <= 10; v++) _ew[v + 1] = Math.Exp(-theta * v);
+                // exp with a max-subtract for numerical stability (offset cancels in the ratio).
+                double maxLog = double.NegativeInfinity;
+                for (int b = 0; b < 12; b++) if (_logLbuf[b] > maxLog) maxLog = _logLbuf[b];
+                for (int b = 0; b < 12; b++) _ew[b] = Math.Exp(_logLbuf[b] - maxLog);
 
                 double total = 0;
                 for (int i = 0; i < pool.Count; i++) total += _ew[ValueIdx(pool[i])];
 
-                double r = _rng.NextDouble() * total, acc = 0;
-                pick = pool.Count - 1;
-                for (int i = 0; i < pool.Count; i++)
+                if (total <= 0)
                 {
-                    acc += _ew[ValueIdx(pool[i])];
-                    if (r <= acc) { pick = i; break; }
+                    pick = _rng.Next(pool.Count);                   // degenerate guard
+                }
+                else
+                {
+                    double r = _rng.NextDouble() * total, acc = 0;
+                    pick = pool.Count - 1;
+                    for (int i = 0; i < pool.Count; i++)
+                    {
+                        acc += _ew[ValueIdx(pool[i])];
+                        if (r <= acc) { pick = i; break; }
+                    }
                 }
             }
 
@@ -618,47 +822,42 @@ public class AICambioAgent : IAgent
     
 }
 
-/// <summary>
-/// The AI's certain knowledge of card positions. Right now it is binary: a slot is either
-/// KNOWN (exact card) or hidden. The Bayesian layer will sit on top, turning "hidden" into a
-/// distribution and feeding a weighted sample into AICambioAgent.Determinize.
-/// </summary>
 public class CardBeliefs
 {
     private readonly int _mySide;
     private readonly int _handSize;
     private readonly int _penaltySize;
-    
-    
-    // 0.03
-    // 6
-    // 0.10
-    // 0.02
-    // 0.02
-    // 6.0
-    // 0.6
-    
-
-    public double KeepAlpha      = 0.03;   // per surviving opp turn, known-and-kept slot
-    public int    KeepTurnCap    = 6;
-    public double SwapInBase     = 0.10;   // base low-tilt when opp keeps a hidden draw
-    public double DisplacedAlpha = 0.02;   // per point of the card they threw away
-    public double DiscardAlpha   = 0.02;   // per point below typical of a plain discard
-    public double TypicalValue   = 6.0;    // ~pool mean
-    public double GlobalCap      = 0.6;   // clamp on accumulated global shift
-
-
     private readonly int _oppSide;
-    private readonly Dictionary<SlotRef, double> _tilt = new();
+
+    private const int Buckets = 12;                 // Card.Value in [-1..10] -> index Value+1 in [0..11]
+
+    // --- Likelihood tuning (every term is a multiplicative factor in probability space) ---
+    // Opponent kept a drawn card, discarding a card worth d: they'd only keep it if it beat d,
+    // so the new (hidden) card v is likely < d. Modelled as sigmoid(SwapBeta·(d - v)).
+    public double SwapBeta = 0.35;    // sharpness of that keep-sigmoid
+    public double SwapBias = 0.05;    // small blanket lean-low for choosing to keep a draw at all
+
+    // A slot the opponent KNOWS and has kept across turns is probably fine for them: a mild,
+    // capped lean-low that grows with the number of turns it survived.
+    public double KeepLogLik  = 0.03;
+    public int    KeepTurnCap = 6;
+
+    // A plain low face-up discard is weak evidence the opponent's whole hand is low: a global
+    // log-linear lean-low applied to all their slots, capped.
+    public double DiscardSlope = 0.02;
+    public double TypicalValue = 6.0;
+    public double GlobalCap    = 0.6;
+
+    private readonly Dictionary<SlotRef, double[]> _logL = new();   // per-slot accumulated log-likelihood
     private readonly HashSet<SlotRef> _oppKnows = new();
     private readonly Dictionary<SlotRef, int> _oppKnownSince = new();
     private int _oppTurnCount;
-    private double _oppGlobalTilt;
+    private double _oppGlobalLowSlope;                              // global lean-low slope (opp slots)
 
     private readonly Dictionary<SlotRef, Card> _known = new();
-    
-    // Stats for graph
-    public double OppGlobalTilt => _oppGlobalTilt;
+
+    // Stats for graphs / telemetry
+    public double OppGlobalTilt => _oppGlobalLowSlope;
     public int    OppTurnCount  => _oppTurnCount;
     public bool   OppKnows(SlotRef s) => _oppKnows.Contains(s);
 
@@ -695,6 +894,34 @@ public class CardBeliefs
         if (knownA) _known[s1] = cardA; else _known.Remove(s1);
     }
 
+    /// <summary>Fill a slot's total log-likelihood over value buckets (index = Card.Value + 1).
+    /// All-zero == flat == "fall back to the deck prior". Known slots return flat (we're certain,
+    /// so no shaping is needed — the determinizer pins them to their exact card anyway).</summary>
+    public void FillLogLik(SlotRef s, double[] outLogL)
+    {
+        Array.Clear(outLogL, 0, outLogL.Length);
+        if (_known.ContainsKey(s)) return;
+
+        if (_logL.TryGetValue(s, out var stored))
+            for (int b = 0; b < Buckets; b++) outLogL[b] += stored[b];
+
+        // keep-survival: opp knows this slot and hasn't replaced it -> mild lean-low.
+        if (_oppKnows.Contains(s) && _oppKnownSince.TryGetValue(s, out var since))
+        {
+            int survived = _oppTurnCount - since;
+            if (survived > KeepTurnCap) survived = KeepTurnCap;
+            if (survived > 0)
+            {
+                double a = KeepLogLik * survived;
+                for (int v = -1; v <= 10; v++) outLogL[v + 1] += -a * v;
+            }
+        }
+
+        // global "opp hand running low" lean (opponent slots only).
+        if (s.Side == _oppSide && _oppGlobalLowSlope != 0.0)
+            for (int v = -1; v <= 10; v++) outLogL[v + 1] += -_oppGlobalLowSlope * v;
+    }
+
     public void Update(GameEffect effect, bool iAmActor)
     {
         switch (effect.Kind)
@@ -722,15 +949,16 @@ public class CardBeliefs
                     }
                     else
                     {
+                        // Opponent kept an (unseen) drawn card, discarding the displaced one.
                         _known.Remove(effect.Slot);
                         ClearSlotMeta(effect.Slot);
-                        _tilt[effect.Slot] = SwapInBase + DisplacedAlpha * effect.Card2.Value;
+                        SetSwapInLikelihood(effect.Slot, effect.Card2.Value);  // Card2 = displaced (public)
                     }
                 }
                 else
                 {
                     SwapKnow(effect.Slot, effect.Slot2);
-                    SwapTilt(effect.Slot, effect.Slot2);
+                    SwapLogL(effect.Slot, effect.Slot2);
                 }
                 break;
 
@@ -757,10 +985,10 @@ public class CardBeliefs
 
                     if (excess > 0)
                     {
-                        _oppGlobalTilt += DiscardAlpha * excess;
-                        if (_oppGlobalTilt > GlobalCap)
+                        _oppGlobalLowSlope += DiscardSlope * excess;
+                        if (_oppGlobalLowSlope > GlobalCap)
                         {
-                            _oppGlobalTilt = GlobalCap;
+                            _oppGlobalLowSlope = GlobalCap;
                         }
                     }
                 }
@@ -778,6 +1006,22 @@ public class CardBeliefs
                 break;
         }
     }
+
+    /// <summary>Likelihood of the new hidden card given the opponent kept it over a displaced
+    /// card worth d: P(kept | value=v) ∝ sigmoid(SwapBeta·(d - v)) — high when v is well below
+    /// d — times a small blanket lean-low. Stored as a log-likelihood vector.</summary>
+    private void SetSwapInLikelihood(SlotRef s, int displacedValue)
+    {
+        var vec = new double[Buckets];
+        for (int v = -1; v <= 10; v++)
+        {
+            double keep = Sigmoid(SwapBeta * (displacedValue - v));
+            vec[v + 1] = Math.Log(keep + 1e-9) - SwapBias * v;
+        }
+        _logL[s] = vec;
+    }
+
+    private static double Sigmoid(double x) => 1.0 / (1.0 + Math.Exp(-x));
 
     /// <summary>Every active slot of both players the AI is NOT certain of.</summary>
     public List<SlotRef> HiddenSlots(GameState world)
@@ -798,33 +1042,19 @@ public class CardBeliefs
         return ids;
     }
     
-    public double TiltFor(SlotRef s)
-    {
-        double theta = _tilt.TryGetValue(s, out var t) ? t : 0.0;
-        if (s.Side == _oppSide) theta += _oppGlobalTilt;
-
-        if (_oppKnows.Contains(s) && _oppKnownSince.TryGetValue(s, out var since))
-        {
-            int survived = _oppTurnCount - since;
-            if (survived > KeepTurnCap) survived = KeepTurnCap;
-            if (survived > 0) theta += KeepAlpha * survived;
-        }
-        return theta;
-    }
-    
     private void ClearSlotMeta(SlotRef s)
     {
-        _tilt.Remove(s);
+        _logL.Remove(s);
         _oppKnows.Remove(s);
         _oppKnownSince.Remove(s);
     }
 
-    private void SwapTilt(SlotRef a, SlotRef b)
+    private void SwapLogL(SlotRef a, SlotRef b)
     {
-        bool hasA = _tilt.TryGetValue(a, out var ta);
-        bool hasB = _tilt.TryGetValue(b, out var tb);
-        if (hasB) _tilt[a] = tb; else _tilt.Remove(a);
-        if (hasA) _tilt[b] = ta; else _tilt.Remove(b);
+        bool hasA = _logL.TryGetValue(a, out var la);
+        bool hasB = _logL.TryGetValue(b, out var lb);
+        if (hasB) _logL[a] = lb; else _logL.Remove(a);
+        if (hasA) _logL[b] = la; else _logL.Remove(b);
 
         bool ka = _oppKnows.Contains(a), kb = _oppKnows.Contains(b);
         _oppKnownSince.TryGetValue(a, out var sa);
@@ -834,4 +1064,3 @@ public class CardBeliefs
     }
     private void ClearOppKnown(SlotRef s) { _oppKnows.Remove(s); _oppKnownSince.Remove(s); }
 }
-

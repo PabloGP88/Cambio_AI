@@ -4490,7 +4490,7 @@ MonoBehaviour:
   outputSubfolder: BensGamesData
   writeLiveFiles: 1
   logBeliefRows: 1
-  gamesToPlay: 10
+  gamesToPlay: 11
   nextSceneName: MainMenu
 --- !u!4 &593155064
 Transform:
@@ -7524,7 +7524,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: -26.720154, y: -42.340027}
+  m_AnchoredPosition: {x: -26.720276, y: -42.340027}
   m_SizeDelta: {x: 395.71997, y: 257.98}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &893408860
@@ -8040,7 +8040,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Version 1.0 - Playtesters
+  m_text: Version 1.0 - Ben
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 91e22ebc4be614b4f9647c1b5be58fbc, type: 2}
   m_sharedMaterial: {fileID: -4408358242168271076, guid: 91e22ebc4be614b4f9647c1b5be58fbc, type: 2}
