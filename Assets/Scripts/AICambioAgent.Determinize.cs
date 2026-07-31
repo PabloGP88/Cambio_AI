@@ -28,9 +28,11 @@ public partial class AICambioAgent
             return null;
         }
 
-        bool oppCambio = world.CambioCalled && world.PlayerCalledCambio;
-        AssignHidden(world, hidden, pool, oppCambio);
-
+        bool oppCambio = world.CambioCalled &&
+                         (GameState.OpponentOf(_mySide) == GameState.PlayerSide
+                             ? world.PlayerCalledCambio
+                             : !world.PlayerCalledCambio);        
+        
         if (ValidateDeterminizations && !world.IsCardSetWorking())
         {
             if (MctsDebug.At(1))
@@ -65,7 +67,7 @@ public partial class AICambioAgent
     private void AssignHidden(GameState world, List<SlotRef> hidden, List<int> pool, bool oppCambio)
     {
         int oppSide = GameState.OpponentOf(_mySide);
-
+        
         // Peaky (confident) slots pick from the full pool first: reduces sequential-WOR bias.
         // Peakiness = spread of the effective log-likelihood; flat slots (no signal) sort last.
         double PeakOf(SlotRef s) { FillEffLogLik(s, oppSide, oppCambio, _logLbuf); return CambioMath.Spread(_logLbuf); }

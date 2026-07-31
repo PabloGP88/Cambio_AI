@@ -18,7 +18,11 @@ public partial class AICambioAgent
     private void RunOneIteration(Node root, GameState publicState, int i)
     {
         GameState world = Determinize(publicState, i);
-        if (world == null) { _failedDeterminizations++; return; }
+        if (world == null)
+        {
+            _failedDeterminizations++; 
+            return;
+        }
         SimulateOnce(world, root, i);
     }
 
@@ -92,7 +96,11 @@ public partial class AICambioAgent
     private double Ucb(Node child, int chooser)
     {
         double exploit = child.reward / child.visits;
-        if (chooser != GameState.AISide) exploit = 1.0 - exploit;   // opponent minimises AI reward
+        if (chooser != _mySide)
+        {
+            exploit = 1.0 - exploit;   // opponent minimises AI reward
+        }
+        
         double explore = Exploration * Math.Sqrt(Math.Log(child.avail) / child.visits);
         return exploit + explore;
     }
@@ -125,19 +133,19 @@ public partial class AICambioAgent
         if (world.IsTerminal)
         {
             int w = world.WinnerSide();
-            if (w == GameState.AISide) return 1.0;
+            if (w == _mySide) return 1.0;
             if (w < 0) return 0.5;
             return 0.0;
         }
 
-        int ai  = world.Score(GameState.AISide);
-        int opp = world.Score(GameState.OpponentOf(GameState.AISide));
+        int ai  = world.Score(_mySide);
+        int opp = world.Score(GameState.OpponentOf(_mySide));
         double rel = 0.5 + 0.5 * Math.Tanh((opp - ai) / EvalTempo);
         double abs = 0.5 - 0.5 * Math.Tanh((ai - EvalTargetScore) / EvalTempo);
 
         // Linear, un-saturated cost for penalty cards the AI is carrying.
         double aiPenalty = 0;
-        foreach (var s in world.GetActiveSlots(GameState.AISide))
+        foreach (var s in world.GetActiveSlots(_mySide))
             if (s.Zone == Zone.Penalty) aiPenalty += world.GetCard(s).Value;
 
         double blended = 0.5 * rel + 0.5 * abs - PenaltyAversion * aiPenalty;
