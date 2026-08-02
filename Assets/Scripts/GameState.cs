@@ -230,6 +230,12 @@ public class GameState
 
     public IEnumerable<SlotRef> GetActiveSlots(int side) => ActiveSlotsOf(side);
 
+    private bool HasAnyActiveSlot(int side)
+    {
+        foreach (var _ in ActiveSlotsOf(side)) return true;
+        return false;
+    }
+
     /// <summary>The action space the AI and PlayerInput pick from, for the current phase.</summary>
     public List<GameCommand> LegalMoves()
     {
@@ -251,9 +257,13 @@ public class GameState
                     if (!_cambioCalled) moves.Add(GameCommand.CallCambio());
                     if (!_matchedThisTurn && _discard.Count > 0)
                     {
-                        // Snap: any active card (either side) may be matched to the top discard.
-                        foreach (var s in ActiveSlotsOf(PlayerSide)) moves.Add(GameCommand.Match(s));
-                        foreach (var s in ActiveSlotsOf(AISide)) moves.Add(GameCommand.Match(s));
+                        // Your own cards can always be matched to the top discard.
+                        foreach (var s in ActiveSlotsOf(ActiveSide)) moves.Add(GameCommand.Match(s));
+
+                        // An opponent card can only be matched if you have a card to give
+                        // into the gap it leaves — otherwise the give obligation is impossible.
+                        if (HasAnyActiveSlot(ActiveSide))
+                            foreach (var s in ActiveSlotsOf(OpponentSide)) moves.Add(GameCommand.Match(s));
                     }
                 }
                 break;
@@ -377,10 +387,29 @@ public class GameState
             Success = _isPlayerTurn
         });
 
-        if (_activePower != CardPower.None) BeginPower(_activePower);
-        else EndTurn(fx);
+        // A power you have no legal target for can't be used — the turn just ends
+        // (prevents an unresolvable UsingPower phase with zero legal moves).
+        if (_activePower != CardPower.None && PowerHasLegalTarget(_activePower))
+            BeginPower(_activePower);
+        else
+            EndTurn(fx);
 
         return true;
+    }
+
+    /// <summary>Whether the active side could actually pick a target for this power.</summary>
+    private bool PowerHasLegalTarget(CardPower power)
+    {
+        bool own = HasAnyActiveSlot(ActiveSide);
+        bool opp = HasAnyActiveSlot(OpponentSide);
+        return power switch
+        {
+            CardPower.LookOwnCard      => own,
+            CardPower.LookOpponentCard => opp,
+            CardPower.BlindSwap        => own && opp,
+            CardPower.LookAndSwap      => own && opp,
+            _                          => false
+        };
     }
 
     private bool DoSwapDrawn(SlotRef s, List<GameEffect> fx)
@@ -467,6 +496,9 @@ public class GameState
     {
         if (_phase != GamePhase.DrawingCard || _matchedThisTurn || _awaitingGiveCard) return false;
         if (!IsActive(s)) return false;
+        // Matching an opponent's card forces you to give one of yours into the gap;
+        // reject it when you have nothing to give.
+        if (s.Side != ActiveSide && !HasAnyActiveSlot(ActiveSide)) return false;
         Card top = TopDiscard;
         if (top.IsNone) return false;
 
@@ -725,6 +757,8 @@ public class GameState
 
         if (_phase != GamePhase.DrawingCard || _awaitingGiveCard) return new MoveResult { Ok = false, Effects = fx };
         if (!IsActive(s)) return new MoveResult { Ok = false, Effects = fx };
+        // Snapping an opponent card forces a give; reject if the snapper has nothing to give.
+        if (s.Side != snapperSide && !HasAnyActiveSlot(snapperSide)) return new MoveResult { Ok = false, Effects = fx };
         Card top = TopDiscard;
         if (top.IsNone) return new MoveResult { Ok = false, Effects = fx };
 

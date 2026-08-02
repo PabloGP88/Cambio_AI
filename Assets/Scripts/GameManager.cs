@@ -42,6 +42,7 @@ public class GameManager : MonoBehaviour
     public event Action<GameEffect, int> OnEffectApplied;
 
     private bool _aiRoutineActive;
+    private bool _aiReactiveSnapUsed;   // AI may reactive-snap at most once per opponent turn
     public event Action<IsmctsReport> OnAiSearchDecision;  // once, when a move has been chosen
     public event Action<string> OnAiNarration; // Tell player whats going on
     public event Action<BeliefReport> OnAiBeliefSnapshot;
@@ -110,6 +111,9 @@ public class GameManager : MonoBehaviour
             _ai?.Observe(fx, iAmActor: actorSide == GameState.AISide);
             OnEffectApplied?.Invoke(fx, actorSide);  // Keep track who applied for csv graphs
         }
+
+        if (State.IsPlayerTurn != pre.Turn)
+            _aiReactiveSnapUsed = false;   // new turn -> the AI may reactive-snap once again
 
         if (State.Phase != pre.Phase || State.IsPlayerTurn != pre.Turn || State.PowerStep != pre.Step)
             OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn);
@@ -293,11 +297,15 @@ public class GameManager : MonoBehaviour
     {
         if (State == null || State.IsTerminal || !State.IsPlayerTurn) return;
         if (State.Phase != GamePhase.DrawingCard || State.AwaitingGiveCard) return;
-        if (_aiRoutineActive) return;
+        if (_aiRoutineActive || _aiReactiveSnapUsed) return;   // one reactive snap per opponent turn
         if (_ai is AICambioAgent agent)
         {
             SlotRef s = agent.SnapOwn(State);
-            if (!s.IsNone) StartCoroutine(AiSnapRoutine(s));
+            if (!s.IsNone)
+            {
+                _aiReactiveSnapUsed = true;
+                StartCoroutine(AiSnapRoutine(s));
+            }
         }
     }
 
@@ -338,10 +346,13 @@ public class GameManager : MonoBehaviour
 
         if (!done || State.IsTerminal || State.IsPlayerTurn) yield break;
         if (State.AwaitingGiveCard && State.GiveByPlayer) yield break;      // human still owes a give
-        if (!State.LegalMoves().Contains(chosen))
+
+        var legalNow = State.LegalMoves();
+        if (legalNow.Count == 0) yield break;      // nothing the AI can legally do — don't spin
+        if (!legalNow.Contains(chosen))
         {
-            MaybePromptAI(); yield break;
-        } // state changed under us
+            MaybePromptAI(); yield break;           // state changed under us; re-decide once
+        }
 
         SubmitAI(chosen);
     }
