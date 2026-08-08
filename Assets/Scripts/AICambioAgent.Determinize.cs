@@ -42,7 +42,12 @@ public partial class AICambioAgent
         }
 
         if (MctsDebug.At(2))
+        {
             MctsDebug.Log(2, $"iter={iteration} determinize: hidden={hidden.Count} known={known.Count} pool={pool.Count}");
+        }
+        
+        AssignHidden(world, hidden, pool, oppCambio);
+        
         return world;
     }
 
