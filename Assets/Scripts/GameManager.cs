@@ -109,11 +109,11 @@ public class GameManager : MonoBehaviour
         {
             DispatchEffect(fx);
             _ai?.Observe(fx, iAmActor: actorSide == GameState.AISide);
-            OnEffectApplied?.Invoke(fx, actorSide);  // record who applied it, for CSV graphs
+            OnEffectApplied?.Invoke(fx, actorSide);
         }
 
         if (State.IsPlayerTurn != pre.Turn)
-            _aiReactiveSnapUsed = false;   // new turn, so the AI may reactive-snap once again
+            _aiReactiveSnapUsed = false;  
 
         if (State.Phase != pre.Phase || State.IsPlayerTurn != pre.Turn || State.PowerStep != pre.Step)
             OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn);
@@ -212,8 +212,7 @@ public class GameManager : MonoBehaviour
         MaybePromptAI();
     }
 
-    /* tell the view to show swap arrows. no state mutation, since SwapDrawnIntoSlot is already
-       legal in CardDrawn, so this is purely a cosmetic phase signal for the UI */
+
     public void EnterSwapSelection()
     {
         if (State == null || State.Phase != GamePhase.CardDrawn) return;
@@ -240,7 +239,6 @@ public class GameManager : MonoBehaviour
         return arr[s.Index];
     }
 
-    // the player's allowed opening peek: their first two hand cards
     public (Card, Card) PeekInitialIds()
     {
         Card a = State.GetCard(new SlotRef(GameState.PlayerSide, Zone.Hand, 0));
@@ -252,7 +250,7 @@ public class GameManager : MonoBehaviour
 
     // view reconciliation and AI loop
 
-    // make every slot view match the truth: visible when it holds a card; clears arming
+
     private void SyncViews()
     {
         Player?.ClearArmed(); 
@@ -317,9 +315,7 @@ public class GameManager : MonoBehaviour
         p == GamePhase.SelectingSwapSlot || p == GamePhase.UsingPower;
 
     // ReSharper disable Unity.PerformanceAnalysis
-    /* drives the AI's decision as a coroutine. the search itself runs in one shot with no
-       mid-search reporting, so this mainly keeps the IAgent contract uniform and lets
-       aiThinkSeconds pace the reveal after the move is decided */
+
     private IEnumerator RunAiTurn()
     {
         _aiRoutineActive = true;
@@ -336,7 +332,7 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSeconds(aiThinkSeconds);
         _aiRoutineActive = false;
         
-        if (!done) yield break; // shouldn't happen, but never submit garbage
+        if (!done) yield break; 
 
         if (!done || State.IsTerminal || State.IsPlayerTurn) yield break;
         if (State.AwaitingGiveCard && State.GiveByPlayer) yield break;      // human still owes a give

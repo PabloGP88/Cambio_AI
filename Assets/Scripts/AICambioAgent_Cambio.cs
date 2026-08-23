@@ -2,15 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-/* the "don't call Cambio too early" guard, applied to the root move set. baseline compares
-   a flat believed-own-score against an absolute cap; the Bayesian path compares believed own
-   vs opponent end-score distributions and only allows the call when we're confidently ahead
-   by a margin, which folds in the opponent's one guaranteed final turn */
 public partial class AICambioAgent
 {
-    /* legal moves at the root, minus a too-early Cambio if the guard forbids it. baseline
-       uses the absolute own-score cap; the Bayesian layer uses a relative own-vs-opponent
-       score-distribution test, see BayesianCambioOk */
+    // legal moves at the root, minus a too-early Cambio if the guard forbids it 
     private List<GameCommand> LegalForSearch(GameState state)
     {
         _guardEvaluated = false;
@@ -27,7 +21,7 @@ public partial class AICambioAgent
             {
                 bool allowCambio = UseBayesianLayer
                     ? BayesianCambioOk(state)                       // relative, distribution-based
-                    : BelievedOwnScore(state) <= CambioGuardScore;  // old absolute cap, baseline
+                    : BelievedOwnScore(state) <= CambioGuardScore;  // old absolute cap
 
                 if (!allowCambio)
                 {
@@ -37,7 +31,7 @@ public partial class AICambioAgent
             }
         }
 
-        /*if (legal.Count > 1)   // This removes blind-matching
+        /*if (legal.Count > 1)   
         {
             Card top = state.TopDiscard;
             var filtered = legal.Where(m =>
@@ -55,12 +49,7 @@ public partial class AICambioAgent
         return legal;
     }
 
-    /* distribution-based Cambio guard. estimates believed own and opponent end scores under
-       the same deck-coherent posterior, treats their difference D = own - opp as
-       Normal(E[own]-E[opp], Var[own]+Var[opp]), where independence across the two hands is a
-       mean-field approximation, and permits the call only when
-       P(D < -CambioMargin) >= CambioConfidence. the margin folds in the opponent's one
-       guaranteed final turn */
+    // distribution-based Cambio guard
     private bool BayesianCambioOk(GameState pub)
     {
         int oppSide = GameState.OpponentOf(_mySide);
@@ -89,9 +78,7 @@ public partial class AICambioAgent
         return pAhead >= CambioConfidence;
     }
 
-    /* believed mean and variance of a side's total score. known slots contribute their exact
-       value with zero variance; hidden slots contribute E[value] and Var[value] from the
-       deck-coherent posterior P(v) proportional to poolHist[v] * exp(effLogL[v]) */
+
     private (double mean, double variance) BelievedScoreDist(
         GameState pub, int side, int oppSide, bool oppCambio, double[] poolHist)
     {

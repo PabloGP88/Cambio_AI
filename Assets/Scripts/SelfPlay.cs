@@ -7,18 +7,6 @@ using System.IO;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-/* headless baseline-vs-Bayesian self-play. plays many games with two AICambioAgents and, for
-   each agent, emits the same three CSVs the human game does, matches / calls / beliefs, via a
-   standalone AgentTelemetry collector that mirrors MatchTracker's schema exactly.
-
-     baseline agent, label "ben", writes cambio_{matches,calls,beliefs}_ben_*.csv
-     Bayesian agent, label "eva", writes cambio_{matches,calls,beliefs}_eva_*.csv
-
-   all six land in Downloads/CambioTelemetry. needs no scene wiring, so no GameManager, UI or
-   MatchTracker. drop on any GameObject, enter Play, press B.
-
-   requires the perspective-correct agent, where Ucb and Evaluate use _mySide and Determinize's
-   oppCambio is side-aware. MatchTracker and the human game are left completely untouched */
 public class SelfPlay : MonoBehaviour
 {
     [Header("Batch")]
@@ -267,10 +255,6 @@ public class SelfPlay : MonoBehaviour
     }
 }
 
-/* standalone telemetry collector, one instance per agent. reproduces MatchTracker's three CSV
-   schemas verbatim, but from a configurable subject side so it can follow an agent that sits on
-   PlayerSide. in each file the subject agent plays the "AI" role, the ai_* columns, and its
-   opponent the "Player" role, exactly like a human-game export */
 public class AgentTelemetry
 {
     private const int P = GameState.PlayerSide;   // 0

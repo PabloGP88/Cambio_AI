@@ -52,7 +52,7 @@ public class PlayerInput
         }
     }
 
-    /* "swap" button: arm swap-target selection and tell the view to show arrows. GameState
+    /* swap button: arm swap-target selection and tell the view to show arrows. GameState
        stays in CardDrawn, where SwapDrawnIntoSlot is legal, so this is UI-only */
     public void PressBeginSwap()
     {

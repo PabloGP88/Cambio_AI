@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-/* ISMCTS tree policy. one search = many determinized iterations, each doing
-   selection, expansion, optional rollout, evaluation and backprop on a shared tree.
-   determinization itself lives in AICambioAgent_Determinize.cs */
+// ISMCTS tree policy
 public partial class AICambioAgent
 {
     private Node NewRoot()

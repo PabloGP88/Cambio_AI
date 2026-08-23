@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 
-// one legal root move plus the stats its node accumulated; this is what the UI renders
 public struct MoveStat
 {
     public GameCommand Move;

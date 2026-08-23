@@ -33,10 +33,7 @@ public class BeliefReport
     public int KnownOppCount;
 
     public List<BeliefSlotRow> Slots; // every active slot, both sides
-
-    /* Bayesian cambio guard decision variables, only set when the guard actually ran on
-       this decision, i.e. Bayesian layer on and CallCambio was on the table. these are the
-       numbers BayesianCambioOk used, not the flat BelievedOwnScore above */
+    
     public bool   GuardEvaluated;
     public double GuardMeanOwn;        // E[own end score] under the deck-coherent posterior
     public double GuardMeanOpp;        // E[opp end score]

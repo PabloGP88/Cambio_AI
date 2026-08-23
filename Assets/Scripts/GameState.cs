@@ -307,8 +307,6 @@ public class GameState
 
     private bool CanDraw() => _drawPile.Count > 0;
 
-    /* the single mutation path; dispatches to the matching Do* method, which validates and
-       either applies, returning true plus effects, or rejects, returning false */
     public MoveResult Apply(GameCommand cmd)
     {
         var fx = new List<GameEffect>();
@@ -684,8 +682,7 @@ public class GameState
 
     // determinization support, used by the AI search
 
-    /* all card ids not known, not in the discard and not the currently drawn card,
-       i.e. the pool the AI may sample hidden slots and the draw pile from */
+
     public List<int> UnseenCardIds(ICollection<int> knowIds)
     {
         var cardsUsed = new HashSet<int>(knowIds);

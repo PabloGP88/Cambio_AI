@@ -1,9 +1,5 @@
 using System.Collections.Generic;
 
-/* turns the finished search and current beliefs into the structs the UI and telemetry
-   consume: IsmctsReport for per-decision search stats, BeliefReport for per-slot
-   belief-vs-truth rows and the cambio-guard decision variables, and a verbose console
-   dump of the root's children */
 public partial class AICambioAgent
 {
     private IsmctsReport BuildReport(Node root, List<GameCommand> legalAtRoot, long elapsedMs, int iterationsDone, GameCommand chosen)

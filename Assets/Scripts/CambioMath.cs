@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 
-/* stateless numeric helpers for the AI's belief system, shared by the search,
-   the cambio guard and belief reporting. every method is a pure function over
-   value-bucket vectors */
 
 // format looks like index = Card.Value + 1, covering values -1 to 10 in buckets 0 to 11
 public static class CambioMath

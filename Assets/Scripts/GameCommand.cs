@@ -1,6 +1,5 @@
 using System;
 
-// which area a targeted card sits in: the normal hand or the penalty pile
 public enum Zone
 {
     Hand, 

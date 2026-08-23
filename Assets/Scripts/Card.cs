@@ -2,7 +2,7 @@ using System;
 
 public enum CardPower { None, LookOwnCard, LookOpponentCard, BlindSwap, LookAndSwap }
 
-/* card id layout
+/* 
    13 to 25   suit 1 red     ranks 1 to 13
    26 to 38   suit 2 red     ranks 1 to 13
    39 to 51   suit 3 black   ranks 1 to 13
@@ -33,7 +33,7 @@ public readonly struct Card : IEquatable<Card>
         }
     }
 
-    // red suits are the two middle ones; depends on the id layout above
+    // red suits 
     public bool IsRed
     {
         get
@@ -46,7 +46,7 @@ public readonly struct Card : IEquatable<Card>
         }
     }
 
-    // scoring value under Cambio rules
+    // Cambio rules
     public int Value
     {
         get
@@ -62,7 +62,7 @@ public readonly struct Card : IEquatable<Card>
         }
     }
 
-    // special power a card triggers, if any
+    // special power
     public CardPower Power
     {
         get

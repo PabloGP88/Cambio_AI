@@ -3,8 +3,7 @@ using System.Collections.Generic;
 
 /* belief-weighted determinization. for each search iteration we clone the public state and
    fill every hidden slot by sampling the unseen pool proportional to that slot's effective
-   belief, leaving the remainder as an uninformed draw pile. with the Bayesian layer off,
-   every belief is flat and this reduces to a uniform determinizer, the null control */
+   belief, leaving the remainder as an uninformed draw pile */
 public partial class AICambioAgent
 {
     private GameState Determinize(GameState publicState, int iteration)
@@ -16,7 +15,7 @@ public partial class AICambioAgent
 
         // the unseen pool is the Bayesian prior: sampling a hidden slot proportional to
         // exp(logL(value)) over these cards yields the deck-coherent posterior
-        //   P(value=v) proportional to N_pool(v) * exp(logL(v))
+
         List<int> pool = world.UnseenCardIds(known);
 
         if (pool.Count < hidden.Count)
@@ -63,18 +62,17 @@ public partial class AICambioAgent
             for (int v = -1; v <= 10; v++) outLogL[v + 1] += -CambioShift * v;
     }
 
-    /* belief-weighted assignment of hidden slots to distinct pool cards, i.e. weighted
-       sampling without replacement. each slot draws a pool card with weight exp(logL(value));
-       summed over the pool this reproduces the deck-coherent posterior
-       P(v) proportional to N_pool(v) * exp(logL(v)). the leftover pool becomes the
-       uninformed draw pile */
+    // belief-weighted assignment of hidden slots to distinct pool cards
     private void AssignHidden(GameState world, List<SlotRef> hidden, List<int> pool, bool oppCambio)
     {
         int oppSide = GameState.OpponentOf(_mySide);
         
-        // peaky, confident slots pick from the full pool first to reduce sequential-WOR bias
+
         // peakiness = spread of the effective log-likelihood; flat slots with no signal sort last
-        double PeakOf(SlotRef s) { FillEffLogLik(s, oppSide, oppCambio, _logLbuf); return CambioMath.Spread(_logLbuf); }
+        double PeakOf(SlotRef s)
+        {
+            FillEffLogLik(s, oppSide, oppCambio, _logLbuf); return CambioMath.Spread(_logLbuf);
+        }
         hidden.Sort((a, b) => PeakOf(b).CompareTo(PeakOf(a)));
 
         var assigned = new int[hidden.Count];
@@ -121,7 +119,7 @@ public partial class AICambioAgent
         }
 
         world.OverwriteHidden(hidden, assigned);
-        Shuffle(pool);                                             // draw pile: genuinely uninformed
+        Shuffle(pool);                                            
         world.SetDrawPile(pool);
     }
 

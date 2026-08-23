@@ -6,18 +6,6 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/* telemetry for agent comparison. emits three thin CSVs, all joinable on
-   session_id and match_index:
-
-     cambio_matches_*  one row per game, objective performance plus AI process metrics
-     cambio_calls_*    one row per game in which a Cambio was called, call justification
-     cambio_beliefs_*  one row per hidden slot per AI decision, belief-vs-truth calibration
-
-   the matches table answers "who plays better". the calls table justifies each agent's
-   Cambio decision on its own terms; baseline uses a flat believed_own_score cap, Bayesian
-   uses guard_p_ahead from the score-distribution test. the beliefs table validates the
-   per-card value estimates the Bayesian layer feeds the search, tilt vs true_value; with
-   the layer off tilt is identically zero, so those rows act as a null control */
 public class MatchTracker : MonoBehaviour
 {
     public static MatchTracker Instance { get; private set; }
@@ -245,9 +233,7 @@ public class MatchTracker : MonoBehaviour
             _m.cambioScore[P]   = _gm.GetScore(true);
             _m.cambioScore[A]   = _gm.GetScore(false);
 
-            // justification: what did the AI base the call on?
-            //   baseline uses flat BelievedOwnScore vs an absolute cap
-            //   bayesian uses guard means plus P(ahead) from the distribution test
+
             if (side == A && _lastAiBelief != null)
             {
                 _m.cambioBelievedScore = _lastAiBelief.BelievedOwnScore;
@@ -274,8 +260,7 @@ public class MatchTracker : MonoBehaviour
                 break;
 
             case EffectKind.SlotsSwapped:
-                // only the single-slot, drawn-into-slot, case carries swap quality; ignore
-                // cross-side power swaps here since that's diagnostic style, not performance
+
                 if (fx.Slot2.IsNone)
                 {
                     _m.swaps[side]++;
@@ -310,8 +295,7 @@ public class MatchTracker : MonoBehaviour
         }
     }
 
-    /* records the AI's decision-time snapshot, accumulates own-hidden count, and optionally
-       emits one calibration row per hidden slot */
+
     private void HandleBelief(BeliefReport r)
     {
         if (_m == null || r == null) return;
