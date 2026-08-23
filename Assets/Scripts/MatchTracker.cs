@@ -6,20 +6,18 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Telemetry for agent comparison. Emits three thin CSVs, all joinable on
-/// (session_id, match_index):
-///
-///   cambio_matches_*  one row per game  — objective performance + AI process metrics
-///   cambio_calls_*    one row per game IN WHICH A CAMBIO WAS CALLED — call justification
-///   cambio_beliefs_*  one row per HIDDEN slot per AI decision — belief-vs-truth calibration
-///
-/// The matches table answers "who plays better". The calls table justifies each agent's
-/// Cambio decision on its own terms (baseline: flat believed_own_score cap; Bayesian:
-/// guard_p_ahead from the score-distribution test). The beliefs table validates the
-/// per-card value estimates the Bayesian layer feeds the search (tilt vs true_value);
-/// with the layer off, tilt is identically zero, so those rows act as a null control.
-/// </summary>
+/* telemetry for agent comparison. emits three thin CSVs, all joinable on
+   session_id and match_index:
+
+     cambio_matches_*  one row per game, objective performance plus AI process metrics
+     cambio_calls_*    one row per game in which a Cambio was called, call justification
+     cambio_beliefs_*  one row per hidden slot per AI decision, belief-vs-truth calibration
+
+   the matches table answers "who plays better". the calls table justifies each agent's
+   Cambio decision on its own terms; baseline uses a flat believed_own_score cap, Bayesian
+   uses guard_p_ahead from the score-distribution test. the beliefs table validates the
+   per-card value estimates the Bayesian layer feeds the search, tilt vs true_value; with
+   the layer off tilt is identically zero, so those rows act as a null control */
 public class MatchTracker : MonoBehaviour
 {
     public static MatchTracker Instance { get; private set; }
@@ -42,7 +40,7 @@ public class MatchTracker : MonoBehaviour
     [Tooltip("Scene loaded once every game in the session has been played and the CSV has been exported. Leave empty to just export and stay in this scene.")]
     public string nextSceneName;
 
-    // ---- public session accessors (for the on-screen HUD) ----
+    // public session accessors for the on-screen HUD
     public int  GamesToPlay     => gamesToPlay;
     public int  GamesCompleted  => _gamesCompleted;
     public int  PlayerWins      => _playerWins;
@@ -50,7 +48,7 @@ public class MatchTracker : MonoBehaviour
     public int  Draws           => _draws;
     public bool SessionComplete => _gamesCompleted >= gamesToPlay;
 
-    /// <summary>Fires whenever a game finishes and the session totals change, so any HUD can refresh.</summary>
+    // fires whenever a game finishes and the session totals change, so any HUD can refresh
     public event Action OnSessionUpdated;
 
     private const int P = GameState.PlayerSide;   // 0
@@ -61,13 +59,13 @@ public class MatchTracker : MonoBehaviour
         CardPower.LookOwnCard, CardPower.LookOpponentCard, CardPower.BlindSwap, CardPower.LookAndSwap
     };
 
-    // ---- accumulated across the whole play session (survives scene reloads) ----
+    // accumulated across the whole play session; survives scene reloads
     private readonly List<string> _matchLines  = new();
     private readonly List<string> _cambioLines = new();
     private readonly List<string> _beliefLines = new();
     private int _matchIndex;
 
-    // ---- session totals (survive same-scene reloads; a new scene taking over starts fresh) ----
+    // session totals; survive same-scene reloads, a new scene taking over starts fresh
     private int _gamesCompleted;
     private int _playerWins;
     private int _aiWins;
@@ -76,7 +74,7 @@ public class MatchTracker : MonoBehaviour
 
     private MatchData _m;
     private bool _matchInProgress;
-    private BeliefReport _lastAiBelief;      // AI's decision-time snapshot; drives unknown-swap + cambio justification
+    private BeliefReport _lastAiBelief;      // AI's decision-time snapshot; drives unknown-swap and cambio justification
 
     private int _lastTurnOwner = -1;
     private GamePhase _prevPhase;
@@ -95,20 +93,20 @@ public class MatchTracker : MonoBehaviour
         public int[] turns = new int[2];
         public int plies;                        // used only to stamp belief rows
 
-        // --- drawn-card decisions (AI only) ---
+        // drawn-card decisions, AI only
         public int[] swaps = new int[2];
         public int[] discards = new int[2];
         public int[] unknownSwaps = new int[2];              // swapped into a slot it could not identify
-        public readonly List<double>[] swapDelta = { new(), new() };  // placed - displaced (negative = improvement)
+        public readonly List<double>[] swapDelta = { new(), new() };  // placed - displaced; negative = improvement
 
-        // --- steady-state uncertainty: mean # of own hidden slots across AI decisions ---
+        // steady-state uncertainty: mean number of own hidden slots across AI decisions
         public readonly List<double> hiddenOwn = new();
 
-        // --- powers (AI only) ---
+        // powers, AI only
         public int[] powerDrawn = new int[2];
         public int[,] powerPlayed = new int[2, 5];           // activated, by CardPower
 
-        // --- matching (AI only) ---
+        // matching, AI only
         public int[] matchAttempts = new int[2];
         public int[] matchSuccess = new int[2];
         public int[] matchFail = new int[2];
@@ -116,19 +114,19 @@ public class MatchTracker : MonoBehaviour
         public int[] matchOnOpp = new int[2];
         public int[] penalties = new int[2];
 
-        // --- decision latency (AI search wall-clock only) ---
+        // decision latency, AI search wall-clock only
         public readonly List<double>[] decisionMs = { new(), new() };
 
-        // --- cambio call (populated only if a call happened) ---
+        // cambio call, populated only if a call happened
         public int    cambioCaller = -2;
         public int    cambioCallerTurn = -1;
-        public int[]  cambioScore = { -1, -1 };              // [P],[A] at the instant of the call
-        public double cambioBelievedScore = double.NaN;      // flat-prior BelievedOwnScore (baseline's guard var)
+        public int[]  cambioScore = { -1, -1 };              // [P], [A] at the instant of the call
+        public double cambioBelievedScore = double.NaN;      // flat-prior BelievedOwnScore, baseline's guard var
         public bool   guardEvaluated;                        // Bayesian guard ran on the calling decision
         public double guardOwnMean, guardOppMean, guardPAhead;
     }
 
-    // ============================================================ lifecycle
+    // lifecycle
 
     private void Awake()
     {
@@ -185,7 +183,7 @@ public class MatchTracker : MonoBehaviour
         gm.OnGameOver         += HandleGameOver;
     }
 
-    // ============================================================ match setup
+    // match setup
 
     private void BeginNewMatch()
     {
@@ -205,7 +203,7 @@ public class MatchTracker : MonoBehaviour
         _prevPhase = _gm.State.Phase;
     }
 
-    // ============================================================ event hooks
+    // event hooks
 
     private void HandlePhase(GamePhase phase, bool isPlayerTurn)
     {
@@ -247,9 +245,9 @@ public class MatchTracker : MonoBehaviour
             _m.cambioScore[P]   = _gm.GetScore(true);
             _m.cambioScore[A]   = _gm.GetScore(false);
 
-            // Justification: what did the AI base the call on?
-            //   baseline  -> flat BelievedOwnScore vs an absolute cap
-            //   bayesian  -> guard means + P(ahead) from the distribution test
+            // justification: what did the AI base the call on?
+            //   baseline uses flat BelievedOwnScore vs an absolute cap
+            //   bayesian uses guard means plus P(ahead) from the distribution test
             if (side == A && _lastAiBelief != null)
             {
                 _m.cambioBelievedScore = _lastAiBelief.BelievedOwnScore;
@@ -276,8 +274,8 @@ public class MatchTracker : MonoBehaviour
                 break;
 
             case EffectKind.SlotsSwapped:
-                // Only the single-slot (drawn-into-slot) case carries swap quality; ignore
-                // cross-side power swaps here — that's diagnostic "style", not performance.
+                // only the single-slot, drawn-into-slot, case carries swap quality; ignore
+                // cross-side power swaps here since that's diagnostic style, not performance
                 if (fx.Slot2.IsNone)
                 {
                     _m.swaps[side]++;
@@ -285,7 +283,7 @@ public class MatchTracker : MonoBehaviour
                     double delta = fx.Card.Value - fx.Card2.Value;   // negative = they improved
                     _m.swapDelta[side].Add(delta);
 
-                    // "Blind" swaps only meaningful for the AI (whose beliefs we export).
+                    // "blind" swaps only meaningful for the AI, whose beliefs we export
                     if (side == A && _lastAiBelief != null && _lastAiBelief.Slots != null &&
                         !_lastAiBelief.Slots.Exists(sl => sl.Known && sl.Slot.Equals(fx.Slot)))
                         _m.unknownSwaps[side]++;
@@ -312,15 +310,15 @@ public class MatchTracker : MonoBehaviour
         }
     }
 
-    /// <summary>Records the AI's decision-time snapshot, accumulates own-hidden count, and
-    /// (optionally) emits one calibration row per HIDDEN slot.</summary>
+    /* records the AI's decision-time snapshot, accumulates own-hidden count, and optionally
+       emits one calibration row per hidden slot */
     private void HandleBelief(BeliefReport r)
     {
         if (_m == null || r == null) return;
         _lastAiBelief = r;
         if (r.Slots == null) return;
 
-        // Steady-state uncertainty metric — counted every AI decision, regardless of logging.
+        // steady-state uncertainty metric, counted every AI decision regardless of logging
         int hiddenOwn = 0;
         foreach (var s in r.Slots)
             if (!s.IsOpponent && !s.Known) hiddenOwn++;
@@ -360,7 +358,7 @@ public class MatchTracker : MonoBehaviour
 
     private void HandleGameOver(int winnerSide) => FinalizeMatch(true, winnerSide);
 
-    // ============================================================ finalisation
+    // finalisation
 
     private void FinalizeMatch(bool completed, int winnerSide)
     {
@@ -423,7 +421,7 @@ public class MatchTracker : MonoBehaviour
             Debug.Log("[MatchTracker] Session complete and exported; no nextSceneName set.");
     }
 
-    // ============================================================ match row
+    // match row
 
     private string BuildMatchLine(MatchData m)
     {
@@ -440,7 +438,7 @@ public class MatchTracker : MonoBehaviour
             SideName(m.winnerSide),
             I(m.score[A]), I(m.score[P]),
 
-            // AI behavioural block — the human opponent is a confound, not a subject.
+            // AI behavioural block; the human opponent is a confound, not a subject
             I(m.turns[A]),
             I(m.swaps[A]),
             I(m.discards[A]),
@@ -471,7 +469,7 @@ public class MatchTracker : MonoBehaviour
         "ai_power_cards_drawn,ai_powers_played," +
         "ai_power_look_own,ai_power_look_opp,ai_power_blind_swap,ai_power_look_swap,ai_decision_ms_avg";
 
-    // ============================================================ cambio row
+    // cambio row
 
     private string BuildCambioLine(MatchData m)
     {
@@ -501,13 +499,13 @@ public class MatchTracker : MonoBehaviour
         "cambio_ai_score,cambio_player_score,cambio_caller_was_ahead," +
         "cambio_ai_believed_score,guard_believed_own_mean,guard_believed_opp_mean,guard_p_ahead";
 
-    // ============================================================ belief header
+    // belief header
 
     private static string BeliefHeader =>
         "session_id,match_index,agent_label,bayesian_on,ply,ai_turn," +
         "is_opponent_slot,opp_knows,tilt_raw,tilt_eff,true_value";
 
-    // ============================================================ CSV export
+    // CSV export
 
     public string ExportCsv()
     {
@@ -600,7 +598,7 @@ public class MatchTracker : MonoBehaviour
     private string LiveCambioPath => Path.Combine(Dir, $"cambio_calls_{SafeLabel}_live.csv");
     private string LiveBeliefPath => Path.Combine(Dir, $"cambio_beliefs_{SafeLabel}_live.csv");
 
-    // ============================================================ helpers
+    // helpers
 
     private static double Avg(List<double> xs){ if (xs.Count == 0) return double.NaN; double s = 0; foreach (var x in xs) s += x; return s / xs.Count; }
 

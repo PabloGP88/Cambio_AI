@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// ISMCTS tree policy. One search = many determinized iterations, each doing
-/// selection → expansion → (optional) rollout → evaluation → backprop on a shared tree.
-/// Determinization itself lives in AICambioAgent.Determinize.cs.
-/// </summary>
+/* ISMCTS tree policy. one search = many determinized iterations, each doing
+   selection, expansion, optional rollout, evaluation and backprop on a shared tree.
+   determinization itself lives in AICambioAgent_Determinize.cs */
 public partial class AICambioAgent
 {
     private Node NewRoot()
@@ -38,8 +36,8 @@ public partial class AICambioAgent
 
             int side = world.ActiveSide;
 
-            // Single pass: bump availability for every legal move that already has a node
-            // (ISMCTS: it was "available" this descent), and remember the first untried move.
+            // single pass: bump availability for every legal move that already has a node,
+            // meaning it was available this descent, and remember the first untried move
             GameCommand? untried = null;
             foreach (var move in legal)
             {
@@ -47,7 +45,7 @@ public partial class AICambioAgent
                 else if (!untried.HasValue) untried = move;
             }
 
-            // Expansion
+            // expansion
             if (untried.HasValue)
             {
                 world.Apply(untried.Value);
@@ -62,7 +60,7 @@ public partial class AICambioAgent
                 break;
             }
 
-            // Selection
+            // selection
             Node chosen = null;
             double bestUcb = double.NegativeInfinity;
             foreach (var move in legal)
@@ -143,7 +141,7 @@ public partial class AICambioAgent
         double rel = 0.5 + 0.5 * Math.Tanh((opp - ai) / EvalTempo);
         double abs = 0.5 - 0.5 * Math.Tanh((ai - EvalTargetScore) / EvalTempo);
 
-        // Linear, un-saturated cost for penalty cards the AI is carrying.
+        // linear, un-saturated cost for penalty cards the AI is carrying
         double aiPenalty = 0;
         foreach (var s in world.GetActiveSlots(_mySide))
             if (s.Zone == Zone.Penalty) aiPenalty += world.GetCard(s).Value;

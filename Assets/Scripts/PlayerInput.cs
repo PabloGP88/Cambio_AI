@@ -6,7 +6,7 @@ public class PlayerInput
 
     public PlayerInput(GameManager gm) { _gm = gm; }
 
-    // Buttons
+    // buttons
     public void PressDrawDeck()
     {
         _selectingSwap = false;
@@ -52,8 +52,8 @@ public class PlayerInput
         }
     }
 
-    /// <summary>"Swap" button: arm swap-target selection and tell the view to show arrows.
-    /// GameState stays in CardDrawn (SwapDrawnIntoSlot is legal there); this is UI-only.</summary>
+    /* "swap" button: arm swap-target selection and tell the view to show arrows. GameState
+       stays in CardDrawn, where SwapDrawnIntoSlot is legal, so this is UI-only */
     public void PressBeginSwap()
     {
         if (CanAct && _gm.State.Phase == GamePhase.CardDrawn)
@@ -65,7 +65,7 @@ public class PlayerInput
         }
     }
 
-    // --- Slot taps ---
+    // slot taps
     public void ClickSlot(int side, Zone zone, int index)
     {
         var st = _gm.State;

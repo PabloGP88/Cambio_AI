@@ -1,6 +1,6 @@
 using System;
 
-/// <summary>Tells what card is bring targeted, in normal "hand" or one of the penalty ones.</summary>
+// which area a targeted card sits in: the normal hand or the penalty pile
 public enum Zone
 {
     Hand, 
@@ -13,9 +13,7 @@ public enum Side
     AI = 1
 }
 
-/// <summary>
-/// Address of a card slot: (side, zone, index)
-/// </summary>
+// address of a card slot by side, zone and index
 [Serializable]
 public readonly struct SlotRef : IEquatable<SlotRef>
 {
@@ -47,13 +45,12 @@ public enum CommandType
     CallCambio
 }
 
-//  Command is what PLayer and AI will use to send the game state to activate the actions that can be done in Cambio
-
+// the single action type both the player and the AI submit to drive the game
 [Serializable]
 public readonly struct GameCommand : IEquatable<GameCommand>
 {
     public readonly CommandType Type;
-    public readonly SlotRef Slot;   // SlotRef.None when the command needs no slot
+    public readonly SlotRef Slot;   // SlotRef.None when no slot is needed
 
     public GameCommand(CommandType type, SlotRef slot)
     {
@@ -61,19 +58,17 @@ public readonly struct GameCommand : IEquatable<GameCommand>
         Slot = slot;
     }
 
-    // Default ones to iterate faster
+    // slot-less command factories
     public static GameCommand DrawFromDeck()        => new(CommandType.DrawFromDeck, SlotRef.None);
     public static GameCommand DiscardDrawn()        => new(CommandType.DiscardDrawn, SlotRef.None);
     public static GameCommand ConfirmTrade()        => new(CommandType.ConfirmTrade, SlotRef.None);
     public static GameCommand FinishPeeking()       => new(CommandType.FinishPeeking, SlotRef.None);
     public static GameCommand CallCambio()          => new(CommandType.CallCambio, SlotRef.None);
     public static GameCommand SwapDrawnInto(SlotRef s) => new(CommandType.SwapDrawnIntoSlot, s);
-    
-    // This is to use a power on a specific slot
     public static GameCommand UsePowerOn(SlotRef s)    => new(CommandType.UsePowerOnSlot, s);
     public static GameCommand Match(SlotRef s)         => new(CommandType.AttemptMatch, s);
-    
-    // When AI or Player matches their opponent card, they give one of their cards to them
+
+    // matching an opponent card obliges the matcher to give one of their own into the gap
     public static GameCommand Give(SlotRef s)          => new(CommandType.GiveCard, s);
 
     public bool Equals(GameCommand o) => Type == o.Type && Slot.Equals(o.Slot);

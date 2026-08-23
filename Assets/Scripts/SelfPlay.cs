@@ -7,20 +7,18 @@ using System.IO;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-/// <summary>
-/// Headless baseline-vs-Bayesian self-play. Plays many games with two AICambioAgents and, for
-/// EACH agent, emits the same three CSVs the human game does (matches / calls / beliefs) via a
-/// standalone <see cref="AgentTelemetry"/> collector that mirrors MatchTracker's schema exactly.
-///
-///   baseline agent -> label "ben"  -> cambio_{matches,calls,beliefs}_ben_*.csv
-///   Bayesian agent -> label "eva"  -> cambio_{matches,calls,beliefs}_eva_*.csv
-///
-/// All six land in Downloads/CambioTelemetry. Needs NO scene wiring (no GameManager/UI/
-/// MatchTracker). Drop on any GameObject, enter Play, press B.
-///
-/// Requires the perspective-correct agent (Ucb/Evaluate use _mySide, Determinize's oppCambio is
-/// side-aware). MatchTracker and the human game are left completely untouched.
-/// </summary>
+/* headless baseline-vs-Bayesian self-play. plays many games with two AICambioAgents and, for
+   each agent, emits the same three CSVs the human game does, matches / calls / beliefs, via a
+   standalone AgentTelemetry collector that mirrors MatchTracker's schema exactly.
+
+     baseline agent, label "ben", writes cambio_{matches,calls,beliefs}_ben_*.csv
+     Bayesian agent, label "eva", writes cambio_{matches,calls,beliefs}_eva_*.csv
+
+   all six land in Downloads/CambioTelemetry. needs no scene wiring, so no GameManager, UI or
+   MatchTracker. drop on any GameObject, enter Play, press B.
+
+   requires the perspective-correct agent, where Ucb and Evaluate use _mySide and Determinize's
+   oppCambio is side-aware. MatchTracker and the human game are left completely untouched */
 public class SelfPlay : MonoBehaviour
 {
     [Header("Batch")]
@@ -61,7 +59,7 @@ public class SelfPlay : MonoBehaviour
         if (!_running && Input.GetKeyDown(runKey)) StartCoroutine(RunBatch());
     }
 
-    /// <summary>Wire to a UI Button if you prefer clicking over the hotkey.</summary>
+    // wire to a UI Button if you prefer clicking over the hotkey
     public void RunFromButton() { if (!_running) StartCoroutine(RunBatch()); }
 
     private IEnumerator RunBatch()
@@ -130,7 +128,7 @@ public class SelfPlay : MonoBehaviour
 
     private static void Tally(int winnerSide, ref int evaWins, ref int benWins, ref int draws)
     {
-        // winnerSide is returned as the Bayesian-relative result: 1 = Bayesian won, -1 = baseline, 0 = draw.
+        // winnerSide is the Bayesian-relative result: 1 = Bayesian won, -1 = baseline, 0 = draw
         if (winnerSide > 0) evaWins++; else if (winnerSide < 0) benWins++; else draws++;
     }
 
@@ -140,9 +138,9 @@ public class SelfPlay : MonoBehaviour
         Debug.Log($"[SelfPlay] {done} games — {bayesianLabel} {eva} / {baselineLabel} {ben} / draw {draw}");
     }
 
-    // ------------------------------------------------------------------ one game
+    // one game
 
-    /// <returns>+1 if the Bayesian agent won, -1 if baseline won, 0 draw.</returns>
+    // returns +1 if the Bayesian agent won, -1 if baseline won, 0 draw
     private int PlayOneGame(int deckSeed, int bayesianSide, AgentTelemetry ben, AgentTelemetry eva)
     {
         int baselineSide = GameState.OpponentOf(bayesianSide);
@@ -156,7 +154,7 @@ public class SelfPlay : MonoBehaviour
         agents[bayesianSide] = bayesAgent;
         agents[baselineSide] = baseAgent;
 
-        // Route each agent's own reports to its own collector.
+        // route each agent's own reports to its own collector
         eva.BeginMatch(bayesianSide, bayesianOn: true);
         ben.BeginMatch(baselineSide, bayesianOn: false);
         bayesAgent.OnSearchDecision += eva.OnDecision;
@@ -189,7 +187,7 @@ public class SelfPlay : MonoBehaviour
             List<GameCommand> legal = state.LegalMoves();
             if (legal.Count == 0) break;
 
-            GameCommand cmd = agents[active].ChooseMove(state);  // fires belief/decision -> active agent's collector
+            GameCommand cmd = agents[active].ChooseMove(state);  // fires belief and decision to the active agent's collector
             if (!legal.Contains(cmd)) cmd = legal[0];
 
             MoveResult r = state.Apply(cmd);
@@ -241,7 +239,7 @@ public class SelfPlay : MonoBehaviour
         {
             eva.OnEffect(e, actorSide);
             ben.OnEffect(e, actorSide);
-            // Keep both agents' beliefs in sync with the world.
+            // keeps both agents' beliefs in sync with the world
         }
     }
 
@@ -269,12 +267,10 @@ public class SelfPlay : MonoBehaviour
     }
 }
 
-// ======================================================================================
-// Standalone telemetry collector. One instance per agent. Reproduces MatchTracker's three
-// CSV schemas verbatim, but from a configurable subject side so it can follow an agent that
-// sits on PlayerSide. In each file the subject agent plays the "AI" role (ai_* columns),
-// its opponent the "Player" role — exactly like a human-game export.
-// ======================================================================================
+/* standalone telemetry collector, one instance per agent. reproduces MatchTracker's three CSV
+   schemas verbatim, but from a configurable subject side so it can follow an agent that sits on
+   PlayerSide. in each file the subject agent plays the "AI" role, the ai_* columns, and its
+   opponent the "Player" role, exactly like a human-game export */
 public class AgentTelemetry
 {
     private const int P = GameState.PlayerSide;   // 0
@@ -309,8 +305,8 @@ public class AgentTelemetry
     private class Match
     {
         public int Index;
-        public int subjectSide;                  // the agent this file is about ("AI" role)
-        public int oppSide;                      // its opponent ("Player" role)
+        public int subjectSide;                  // the agent this file is about, the "AI" role
+        public int oppSide;                      // its opponent, the "Player" role
         public bool bayesianOn;
         public bool completed;
         public int winnerSide = -2;
@@ -345,7 +341,7 @@ public class AgentTelemetry
         public double guardOwnMean, guardOppMean, guardPAhead;
     }
 
-    // ---------------------------------------------------------------- match lifecycle
+    // match lifecycle
 
     public void BeginMatch(int subjectSide, bool bayesianOn)
     {
@@ -375,7 +371,7 @@ public class AgentTelemetry
         _m = null;
     }
 
-    // ---------------------------------------------------------------- event hooks
+    // event hooks
 
     public void OnPhase(GamePhase phase, int activeSide, CardPower activePower)
     {
@@ -492,7 +488,7 @@ public class AgentTelemetry
         _m.decisionMs[_m.subjectSide].Add(r.ElapsedMs);
     }
 
-    // ---------------------------------------------------------------- rows (subject = "AI")
+    // rows; subject = "AI"
 
     private string BuildMatchLine(Match m)
     {
@@ -554,7 +550,7 @@ public class AgentTelemetry
         "session_id,match_index,agent_label,bayesian_on,ply,ai_turn," +
         "is_opponent_slot,opp_knows,tilt_raw,tilt_eff,true_value";
 
-    // ---------------------------------------------------------------- export
+    // export
 
     public string Export()
     {

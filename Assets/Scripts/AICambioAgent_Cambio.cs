@@ -2,23 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-/// <summary>
-/// The "don't call Cambio too early" guard, applied to the root move set. Baseline compares
-/// a flat believed-own-score against an absolute cap; the Bayesian path compares believed own
-/// vs opponent END-score distributions and only allows the call when we're confidently ahead
-/// by a margin (which folds in the opponent's one guaranteed final turn).
-/// </summary>
+/* the "don't call Cambio too early" guard, applied to the root move set. baseline compares
+   a flat believed-own-score against an absolute cap; the Bayesian path compares believed own
+   vs opponent end-score distributions and only allows the call when we're confidently ahead
+   by a margin, which folds in the opponent's one guaranteed final turn */
 public partial class AICambioAgent
 {
-    /// <summary>Legal moves at the root, minus a too-early Cambio if the guard forbids it.
-    /// Baseline uses the absolute own-score cap; the Bayesian layer uses a relative
-    /// own-vs-opponent score-distribution test (see BayesianCambioOk).</summary>
+    /* legal moves at the root, minus a too-early Cambio if the guard forbids it. baseline
+       uses the absolute own-score cap; the Bayesian layer uses a relative own-vs-opponent
+       score-distribution test, see BayesianCambioOk */
     private List<GameCommand> LegalForSearch(GameState state)
     {
         _guardEvaluated = false;
         var legal = state.LegalMoves();
 
-        // Only pay for the guard when CallCambio is actually on the table this decision.
+        // only pay for the guard when CallCambio is actually on the table this decision
         if (UseCambioGuard && legal.Count > 1)
         {
             bool hasCambio = false;
@@ -29,7 +27,7 @@ public partial class AICambioAgent
             {
                 bool allowCambio = UseBayesianLayer
                     ? BayesianCambioOk(state)                       // relative, distribution-based
-                    : BelievedOwnScore(state) <= CambioGuardScore;  // old absolute cap (baseline)
+                    : BelievedOwnScore(state) <= CambioGuardScore;  // old absolute cap, baseline
 
                 if (!allowCambio)
                 {
@@ -57,12 +55,12 @@ public partial class AICambioAgent
         return legal;
     }
 
-    /// <summary>Distribution-based Cambio guard. Estimates believed own and opponent END scores
-    /// under the same deck-coherent posterior, treats their difference D = own - opp as
-    /// Normal(E[own]-E[opp], Var[own]+Var[opp]) (independence across the two hands is a
-    /// mean-field approximation), and permits the call only when
-    ///   P(D &lt; -CambioMargin) >= CambioConfidence.
-    /// The margin folds in the opponent's one guaranteed final turn.</summary>
+    /* distribution-based Cambio guard. estimates believed own and opponent end scores under
+       the same deck-coherent posterior, treats their difference D = own - opp as
+       Normal(E[own]-E[opp], Var[own]+Var[opp]), where independence across the two hands is a
+       mean-field approximation, and permits the call only when
+       P(D < -CambioMargin) >= CambioConfidence. the margin folds in the opponent's one
+       guaranteed final turn */
     private bool BayesianCambioOk(GameState pub)
     {
         int oppSide = GameState.OpponentOf(_mySide);
@@ -91,9 +89,9 @@ public partial class AICambioAgent
         return pAhead >= CambioConfidence;
     }
 
-    /// <summary>Believed mean and variance of a side's total score. Known slots contribute
-    /// their exact value with zero variance; hidden slots contribute E[value] and Var[value]
-    /// from the deck-coherent posterior P(v) ∝ poolHist[v]·exp(effLogL[v]).</summary>
+    /* believed mean and variance of a side's total score. known slots contribute their exact
+       value with zero variance; hidden slots contribute E[value] and Var[value] from the
+       deck-coherent posterior P(v) proportional to poolHist[v] * exp(effLogL[v]) */
     private (double mean, double variance) BelievedScoreDist(
         GameState pub, int side, int oppSide, bool oppCambio, double[] poolHist)
     {
@@ -102,7 +100,7 @@ public partial class AICambioAgent
         {
             if (_beliefs.Known.TryGetValue(slot, out var c))
             {
-                mean += c.Value;                        // certain -> contributes no variance
+                mean += c.Value;                        // certain, so contributes no variance
             }
             else
             {
@@ -115,8 +113,8 @@ public partial class AICambioAgent
         return (mean, variance);
     }
 
-    /// <summary>Flat-prior believed own score used by the baseline guard: known slots at their
-    /// exact value, every unknown own slot at UnknownOwnPrior.</summary>
+    /* flat-prior believed own score used by the baseline guard: known slots at their exact
+       value, every unknown own slot at UnknownOwnPrior */
     private double BelievedOwnScore(GameState pub)
     {
         double score = 0;

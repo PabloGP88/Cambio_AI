@@ -1,9 +1,7 @@
-/// <summary>
-/// Leveled console logging for the search. 0 off, 1 per-decision summary, 2 + expansions
-/// and determinize stats, 3 + every selection / rollout. Flip via MctsDebug.Verbosity.
-/// NOTE: always guard hot-path calls with `if (MctsDebug.At(n))` so the interpolated
-/// string isn't built when the level is disabled.
-/// </summary>
+/* leveled console logging for the search. 0 off, 1 per-decision summary, 2 adds expansions
+   and determinize stats, 3 adds every selection and rollout. flip via MctsDebug.Verbosity.
+   always guard hot-path calls with if (MctsDebug.At(n)) so the interpolated string isn't
+   built when the level is disabled */
 public static class MctsDebug
 {
     public static bool Enabled = true;

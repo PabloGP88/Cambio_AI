@@ -1,9 +1,7 @@
 using System.Collections.Generic;
 
-/// <summary>
-/// One node in the ISMCTS tree: the action that reached it, its parent, its children keyed
-/// by action, and the running visit/availability/reward stats the tree policy backs up.
-/// </summary>
+/* one node in the ISMCTS tree: the action that reached it, its parent, its children keyed
+   by action, and the running visit, availability and reward stats the tree policy backs up */
 public sealed class Node
 {
     public readonly GameCommand Action;

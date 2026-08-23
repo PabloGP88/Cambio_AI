@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// Per-slot belief state for the AI: what it is certain of (Known), what the opponent is
-/// believed to know (OppKnows), and accumulated per-slot / global log-likelihood shifts that
-/// nudge hidden-card value estimates low or high. Consumed by the determinizer and the
-/// cambio guard through FillLogLik; updated from observed game effects via Update.
-/// </summary>
+/* per-slot belief state for the AI: what it is certain of via Known, what the opponent is
+   believed to know via OppKnows, and accumulated per-slot and global log-likelihood shifts
+   that nudge hidden-card value estimates low or high. consumed by the determinizer and the
+   cambio guard through FillLogLik; updated from observed game effects via Update */
 public class CardBeliefs
 {
     private readonly int _mySide;
@@ -14,21 +12,22 @@ public class CardBeliefs
     private readonly int _penaltySize;
     private readonly int _oppSide;
 
-    private const int Buckets = 12;                 // Card.Value in [-1..10] -> index Value+1 in [0..11]
+    private const int Buckets = 12;                 // Card.Value from -1 to 10 maps to index Value+1, 0 to 11
 
-    // --- Likelihood tuning (every term is a multiplicative factor in probability space) ---
-    // Opponent kept a drawn card, discarding a card worth d: they'd only keep it if it beat d,
-    // so the new (hidden) card v is likely < d. Modelled as sigmoid(SwapBeta·(d - v)).
+    // likelihood tuning; every term is a multiplicative factor in probability space
+
+    /* opponent kept a drawn card, discarding one worth d: they'd only keep it if it beat d,
+       so the new hidden card v is likely below d. modelled as sigmoid(SwapBeta*(d - v)) */
     public double SwapBeta = 0.35;    // sharpness of that keep-sigmoid
     public double SwapBias = 0.05;    // small blanket lean-low for choosing to keep a draw at all
 
-    // A slot the opponent KNOWS and has kept across turns is probably fine for them: a mild,
-    // capped lean-low that grows with the number of turns it survived.
+    /* a slot the opponent knows and has kept across turns is probably fine for them: a mild,
+       capped lean-low that grows with the number of turns it survived */
     public double KeepLogLik  = 0.03;
     public int    KeepTurnCap = 6;
 
-    // A plain low face-up discard is weak evidence the opponent's whole hand is low: a global
-    // log-linear lean-low applied to all their slots, capped.
+    /* a plain low face-up discard is weak evidence the opponent's whole hand is low: a global
+       log-linear lean-low applied to all their slots, capped */
     public double DiscardSlope = 0.02;
     public double TypicalValue = 6.0;
     public double GlobalCap    = 0.6;
@@ -37,11 +36,11 @@ public class CardBeliefs
     private readonly HashSet<SlotRef> _oppKnows = new();
     private readonly Dictionary<SlotRef, int> _oppKnownSince = new();
     private int _oppTurnCount;
-    private double _oppGlobalLowSlope;                              // global lean-low slope (opp slots)
+    private double _oppGlobalLowSlope;                              // global lean-low slope for opponent slots
 
     private readonly Dictionary<SlotRef, Card> _known = new();
 
-    // Stats for graphs / telemetry
+    // stats for graphs and telemetry
     public double OppGlobalTilt => _oppGlobalLowSlope;
     public int    OppTurnCount  => _oppTurnCount;
     public bool   OppKnows(SlotRef s) => _oppKnows.Contains(s);
@@ -69,7 +68,7 @@ public class CardBeliefs
         _known[s] = card;
     }
 
-    /// <summary>Move known-ness with the cards when two slots swap contents.</summary>
+    // move known-ness with the cards when two slots swap contents
     public void SwapKnow(SlotRef s0, SlotRef s1)
     {
         bool knownA = _known.TryGetValue(s0, out var cardA);
@@ -79,9 +78,9 @@ public class CardBeliefs
         if (knownA) _known[s1] = cardA; else _known.Remove(s1);
     }
 
-    /// <summary>Fill a slot's total log-likelihood over value buckets (index = Card.Value + 1).
-    /// All-zero == flat == "fall back to the deck prior". Known slots return flat (we're certain,
-    /// so no shaping is needed — the determinizer pins them to their exact card anyway).</summary>
+    /* fill a slot's total log-likelihood over value buckets; index = Card.Value + 1. all-zero
+       means flat, i.e. fall back to the deck prior. known slots return flat since we're certain,
+       so no shaping is needed; the determinizer pins them to their exact card anyway */
     public void FillLogLik(SlotRef s, double[] outLogL)
     {
         Array.Clear(outLogL, 0, outLogL.Length);
@@ -90,7 +89,7 @@ public class CardBeliefs
         if (_logL.TryGetValue(s, out var stored))
             for (int b = 0; b < Buckets; b++) outLogL[b] += stored[b];
 
-        // keep-survival: opp knows this slot and hasn't replaced it -> mild lean-low.
+        // keep-survival: opp knows this slot and hasn't replaced it, so mild lean-low
         if (_oppKnows.Contains(s) && _oppKnownSince.TryGetValue(s, out var since))
         {
             int survived = _oppTurnCount - since;
@@ -102,7 +101,7 @@ public class CardBeliefs
             }
         }
 
-        // global "opp hand running low" lean (opponent slots only).
+        // global "opp hand running low" lean, opponent slots only
         if (s.Side == _oppSide && _oppGlobalLowSlope != 0.0)
             for (int v = -1; v <= 10; v++) outLogL[v + 1] += -_oppGlobalLowSlope * v;
     }
@@ -119,14 +118,14 @@ public class CardBeliefs
                 break;
 
             case EffectKind.SlotRevealed:
-                // Only learn it if WE looked (LookOwn / LookOpponent)
+                // only learn it if we looked, via LookOwn or LookOpponent
                 if (iAmActor) SetKnow(effect.Slot, effect.Card);
                 break;
 
             case EffectKind.SlotsSwapped:
                 if (effect.Slot2.IsNone)
                 {
-                    // Swap-drawn-into-slot: single slot changed.
+                    // swap-drawn-into-slot: a single slot changed
                     if (iAmActor)
                     {
                         SetKnow(effect.Slot, effect.Card);   // we know what we placed
@@ -134,10 +133,10 @@ public class CardBeliefs
                     }
                     else
                     {
-                        // Opponent kept an (unseen) drawn card, discarding the displaced one.
+                        // opponent kept an unseen drawn card, discarding the displaced one
                         _known.Remove(effect.Slot);
                         ClearSlotMeta(effect.Slot);
-                        SetSwapInLikelihood(effect.Slot, effect.Card2.Value);  // Card2 = displaced (public)
+                        SetSwapInLikelihood(effect.Slot, effect.Card2.Value);  // Card2 = displaced, public
                     }
                 }
                 else
@@ -192,9 +191,9 @@ public class CardBeliefs
         }
     }
 
-    /// <summary>Likelihood of the new hidden card given the opponent kept it over a displaced
-    /// card worth d: P(kept | value=v) ∝ sigmoid(SwapBeta·(d - v)) — high when v is well below
-    /// d — times a small blanket lean-low. Stored as a log-likelihood vector.</summary>
+    /* likelihood of the new hidden card given the opponent kept it over a displaced card worth
+       d: P(kept | value=v) proportional to sigmoid(SwapBeta*(d - v)), high when v is well below
+       d, times a small blanket lean-low. stored as a log-likelihood vector */
     private void SetSwapInLikelihood(SlotRef s, int displacedValue)
     {
         var vec = new double[Buckets];
@@ -208,7 +207,7 @@ public class CardBeliefs
 
     private static double Sigmoid(double x) => 1.0 / (1.0 + Math.Exp(-x));
 
-    /// <summary>Every active slot of both players the AI is NOT certain of.</summary>
+    // every active slot of both players the AI is not certain of
     public List<SlotRef> HiddenSlots(GameState world)
     {
         var hidden = new List<SlotRef>();
@@ -218,7 +217,7 @@ public class CardBeliefs
         return hidden;
     }
 
-    /// <summary>Ids the AI knows, restricted to still-active slots (excluded from the unseen pool).</summary>
+    // ids the AI knows, restricted to still-active slots; excluded from the unseen pool
     public List<int> KnowIds(GameState world)
     {
         var ids = new List<int>(_known.Count);

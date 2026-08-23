@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 
-/// <summary>
-/// Turns the finished search + current beliefs into the structs the UI and telemetry consume:
-/// IsmctsReport (per-decision search stats), BeliefReport (per-slot belief-vs-truth rows and
-/// the cambio-guard decision variables) and a verbose console dump of the root's children.
-/// </summary>
+/* turns the finished search and current beliefs into the structs the UI and telemetry
+   consume: IsmctsReport for per-decision search stats, BeliefReport for per-slot
+   belief-vs-truth rows and the cambio-guard decision variables, and a verbose console
+   dump of the root's children */
 public partial class AICambioAgent
 {
     private IsmctsReport BuildReport(Node root, List<GameCommand> legalAtRoot, long elapsedMs, int iterationsDone, GameCommand chosen)
@@ -45,13 +44,13 @@ public partial class AICambioAgent
     {
         int oppSide = GameState.OpponentOf(_mySide);
 
-        // Match how the cambio shift is applied elsewhere: "has the OPPONENT called cambio".
+        // match how the cambio shift is applied elsewhere: has the opponent called cambio
         bool oppCambio = pub.CambioCalled &&
                          (oppSide == GameState.PlayerSide ? pub.PlayerCalledCambio
                                                           : !pub.PlayerCalledCambio);
 
-        // Build the current unseen-pool histogram once: it's the shared prior for every
-        // hidden slot, and lets us report the believed MEAN value per slot (E[value]).
+        // build the current unseen-pool histogram once: it's the shared prior for every
+        // hidden slot, and lets us report the believed mean value per slot, E[value]
         List<int> poolIds = pub.UnseenCardIds(_beliefs.KnowIds(pub));
         double poolMean = CambioMath.PoolHistogram(poolIds, _poolHist);
 

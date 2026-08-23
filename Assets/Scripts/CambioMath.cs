@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// Stateless numeric helpers shared by the search, the Bayesian cambio guard and the
-/// belief reporting. Everything here is a pure function over value-bucket vectors
-/// (index = Card.Value + 1, covering values -1..10 in buckets 0..11).
-/// </summary>
+/* stateless numeric helpers for the AI's belief system, shared by the search,
+   the cambio guard and belief reporting. every method is a pure function over
+   value-bucket vectors */
+
+// format looks like index = Card.Value + 1, covering values -1 to 10 in buckets 0 to 11
 public static class CambioMath
 {
-    /// <summary>Map a card id to its value bucket index (-1..10 -> 0..11).</summary>
+    // card id = its value bucket index
     public static int ValueIdx(int cardId) => new Card(cardId).Value + 1;
 
-    /// <summary>Peak-to-trough span of a log-likelihood vector — 0 means "flat / no signal".</summary>
+    // spread of a log-likelihood vector; 0 means no signal
     public static double Spread(double[] logL)
     {
         double mn = double.PositiveInfinity, mx = double.NegativeInfinity;
@@ -23,16 +23,14 @@ public static class CambioMath
         return mx - mn;
     }
 
-    /// <summary>Believed mean and variance of a slot's value under the deck-coherent posterior
-    /// P(v) ∝ poolHist[v] · exp(logL[v]). Values outside the current pool get zero weight, so
-    /// beliefs stay consistent with what is physically left in the deck. A max-subtract keeps
-    /// exp() from under/overflowing for peaked likelihoods.</summary>
+    /* believed mean and variance of a slot's value under the deck-coherent posterior,
+       weighting each value by what is physically still left in the pool */
     public static (double mean, double variance) MomentsOf(double[] logL, double[] poolHist)
     {
         double maxLog = double.NegativeInfinity;
         for (int b = 0; b < 12; b++)
             if (poolHist[b] > 0 && logL[b] > maxLog) maxLog = logL[b];
-        if (double.IsNegativeInfinity(maxLog)) return (0.0, 0.0);   // empty pool
+        if (double.IsNegativeInfinity(maxLog)) return (0.0, 0.0);
 
         double num = 0, num2 = 0, den = 0;
         for (int v = -1; v <= 10; v++)
@@ -45,13 +43,13 @@ public static class CambioMath
         if (den <= 0) return (0.0, 0.0);
         double mean = num / den;
         double variance = num2 / den - mean * mean;
-        return (mean, variance < 0 ? 0.0 : variance);   // clamp tiny negative from rounding
+        return (mean, variance < 0 ? 0.0 : variance);
     }
 
-    /// <summary>E[value] for a slot; thin wrapper over MomentsOf for telemetry.</summary>
+    // expected value of a slot; thin wrapper over MomentsOf
     public static double ExpectedValue(double[] logL, double[] poolHist) => MomentsOf(logL, poolHist).mean;
 
-    /// <summary>Standard normal CDF (Zelen &amp; Severo / A&amp;S 26.2.17, |error| &lt; 7.5e-8).</summary>
+    // standard normal CDF approximation
     public static double NormalCdf(double z)
     {
         double t = 1.0 / (1.0 + 0.2316419 * Math.Abs(z));
@@ -61,8 +59,8 @@ public static class CambioMath
         return z >= 0 ? 1.0 - p : p;
     }
 
-    /// <summary>Fill a 12-bucket histogram of the pool's value distribution and return the
-    /// pool's mean value. Buckets are indexed Value+1.</summary>
+    /* fill a 12-bucket histogram of the pool's value distribution and
+       return the pool's mean value */
     public static double PoolHistogram(List<int> pool, double[] hist12)
     {
         Array.Clear(hist12, 0, hist12.Length);

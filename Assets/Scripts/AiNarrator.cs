@@ -9,12 +9,10 @@ public static class AiNarrator
         if (s.IsNone) return "a card";
         if (s.Zone == Zone.Penalty) return $"penalty card {s.Index + 1}";
 
-        // Screen positions (what a playtester sees). AI hand is at the top, player's at
-        // the bottom, so each side indexes its 2x2 grid from its own "near" row:
-        //
-        //   AI:  0 1        Player:  2 3
-        //        2 3                 0 1
-        //
+        /* screen positions as a playtester sees them. the AI hand is at the top, the player's
+           at the bottom, so each side indexes its 2x2 grid from its own near row:
+             AI:  0 1        Player:  2 3
+                  2 3                 0 1 */
         if (s.Side == GameState.AISide)
             return s.Index switch
             {
@@ -44,9 +42,9 @@ public static class AiNarrator
         _                          => "use a power"
     };
 
-    /// <summary>Build one commentary line for a just-applied AI command. Returns null
-    /// when there's nothing worth announcing (e.g. an intermediate power selection, so
-    /// the previous line stays on screen).</summary>
+    /* build one commentary line for a just-applied AI command. returns null when there's
+       nothing worth announcing, e.g. an intermediate power selection, so the previous line
+       stays on screen */
     public static string Describe(CommandType type, List<GameEffect> effects, GameState stateAfter)
     {
         switch (type)
@@ -72,7 +70,7 @@ public static class AiNarrator
 
             case CommandType.UsePowerOnSlot:
             {
-                // A look-power reveals a slot; a completed swap-power produces a cross-side swap.
+                // a look-power reveals a slot; a completed swap-power produces a cross-side swap
                 SlotRef looked = FirstReveal(effects);
                 if (!looked.IsNone)
                     return looked.Side == GameState.AISide
@@ -83,7 +81,7 @@ public static class AiNarrator
                 if (!his.IsNone)
                     return $"{Name} swapped his {Pos(his)} with your {Pos(yours)}.";
 
-                return null; // intermediate pick (choosing which cards to swap) — stay quiet
+                return null; // intermediate pick, choosing which cards to swap, so stay quiet
             }
 
             case CommandType.ConfirmTrade:
@@ -109,7 +107,7 @@ public static class AiNarrator
 
             case CommandType.FinishPeeking:
             default:
-                return null; // nothing to add — keep the previous line on screen
+                return null; // nothing to add, keep the previous line on screen
         }
     }
     

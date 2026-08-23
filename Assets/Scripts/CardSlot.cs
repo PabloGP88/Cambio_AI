@@ -7,7 +7,7 @@ public class CardSlot : MonoBehaviour, IPointerClickHandler
 {
     [Header("Optional visuals")]
     [SerializeField] private GameObject highlight;   // shown when armed
-    [SerializeField] private SpriteRenderer faceOrBack; 
+    [SerializeField] private SpriteRenderer faceOrBack;
 
     public int Side { get; private set; }
     public Zone Zone { get; private set; }

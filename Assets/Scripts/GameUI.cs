@@ -62,10 +62,10 @@ public class GameUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI gameOverText;
 
     [Header("Session Tracker UI")]
-    // Running totals across the whole session, read from the persistent MatchTracker.
-    // Both are optional — leave either unassigned if you don't need it.
+    // running totals across the whole session, read from the persistent MatchTracker
+    // both are optional; leave either unassigned if you don't need it
     [SerializeField] private TextMeshProUGUI sessionGamesText;   // e.g. "3 / 10 games"
-    [SerializeField] private TextMeshProUGUI sessionScoreText;   // e.g. "4 - 3" (player - AI)
+    [SerializeField] private TextMeshProUGUI sessionScoreText;   // e.g. "4 - 3", player - AI
 
     [Header("AI Commentary")]
     [SerializeField] private TextMeshProUGUI aiNarrationText;
@@ -73,12 +73,11 @@ public class GameUI : MonoBehaviour
     private readonly System.Collections.Generic.Queue<string> _narrationLog = new();
     
     [Header("AI ISMCTS Debug Panels")]
-    // Aggregate stats for the search that just ran: iterations, elapsed time, root visits,
-    // nodes expanded, how many of the legal root moves actually got explored. This is the
-    // "what is the AI running with" panel — it updates once per decision, not live.
+    /* aggregate stats for the search that just ran: iterations, elapsed time, root visits,
+       nodes expanded, how many of the legal root moves actually got explored. this is the
+       "what is the AI running with" panel; it updates once per decision, not live */
     [SerializeField] private TextMeshProUGUI ismctsRunStatsText;
-    // The chosen move's stats plus its closest runner-up, so you can see exactly why one
-    // move beat another (visits, avg reward, avail).
+    // the chosen move's stats plus its closest runner-up, so you can see why one move beat another
     [SerializeField] private TextMeshProUGUI ismctsDecisionText;
 
     private GameManager _gm;
@@ -88,10 +87,10 @@ public class GameUI : MonoBehaviour
     void Start()
     {
         _gm = GameManager.Instance;
-        _deck = _gm.Catalog;                 // was _gm.Getdeck()
+        _deck = _gm.Catalog;
 
-        // Feed the inspector name into the (static) narrator so its commentary matches
-        // the on-screen label. Set before any AI turn can produce a line.
+        // feed the inspector name into the static narrator so its commentary matches the
+        // on-screen label; set before any AI turn can produce a line
         AiNarrator.Name = string.IsNullOrEmpty(aiName) ? "Eva" : aiName;
 
         _gm.OnPhaseChanged += HandlePhaseChanged;
@@ -107,8 +106,8 @@ public class GameUI : MonoBehaviour
         
         _gm.OnAiNarration += HandleAiNarration;   
 
-        // Session HUD: the MatchTracker persists across game reloads, so read the current
-        // running totals now and refresh whenever a game finishes.
+        // session HUD: the MatchTracker persists across game reloads, so read the current
+        // running totals now and refresh whenever a game finishes
         if (MatchTracker.Instance != null)
             MatchTracker.Instance.OnSessionUpdated += RefreshSessionTracker;
         RefreshSessionTracker();
@@ -116,8 +115,8 @@ public class GameUI : MonoBehaviour
         ResetPenaltyUI();
         SetImageAlpha(matchSlotImage, 0f);
 
-        // If GameManager.Start already ran, State exists and we can show the peek now.
-        // If it hasn't, we'll catch the Dealing OnPhaseChanged event below instead.
+        // if GameManager.Start already ran, State exists and we can show the peek now
+        // if it hasn't, we'll catch the Dealing OnPhaseChanged event below instead
         if (_gm.State != null) ShowInitialPeek();
     }
 
@@ -131,7 +130,7 @@ public class GameUI : MonoBehaviour
 
     void OnDestroy()
     {
-        // Unhook the session tracker first — this must run even if _gm was never set.
+        // unhook the session tracker first; this must run even if _gm was never set
         if (MatchTracker.Instance != null)
             MatchTracker.Instance.OnSessionUpdated -= RefreshSessionTracker;
 
@@ -150,16 +149,13 @@ public class GameUI : MonoBehaviour
 
     }
 
-    // ----------------------------------------------------------------------
-    // Button hooks (wire these to your Button OnClick events in the Inspector,
-    // exactly as before — names and signatures are unchanged).
-    // ----------------------------------------------------------------------
+    // button hooks; wire these to Button OnClick events in the Inspector
 
     public void OnStartGamePressed()
     {
         initialCardsView.SetActive(false);
         turnUI.SetActive(true);
-        _gm.StartPlay();                                  // was _gm.SetPhase(GamePhase.DrawingCard, true)
+        _gm.StartPlay();
     }
 
     public void OnDrawFromDeckPressed()    => _gm.Player.PressDrawDeck();
@@ -167,9 +163,9 @@ public class GameUI : MonoBehaviour
     public void OnSwapDrawnPressed()       => _gm.Player.PressBeginSwap();
     public void OnCambioPressed()          => _gm.Player.PressCambio();
 
-    /// <summary>Wire this to a "Next game" / "Continue" button (e.g. on the game-over panel).
-    /// Plays the next game, or — once the session's games are all played — exports the data
-    /// and loads the scene named on the MatchTracker.</summary>
+    /* wire this to a "next game" or "continue" button, e.g. on the game-over panel. plays the
+       next game, or once the session's games are all played exports the data and loads the
+       scene named on the MatchTracker */
     public void OnNextGamePressed()
     {
         if (MatchTracker.Instance != null)
@@ -182,18 +178,16 @@ public class GameUI : MonoBehaviour
     {
         slotRevealedUI.SetActive(false);
         HideAllArrows();
-        _gm.Player.PressFinishPeek();                     // was _gm.FinishPeeking()
+        _gm.Player.PressFinishPeek();
     }
 
     public void OnInformedTradeConfirmPressed()
     {
         informedTradeView.SetActive(false);
-        _gm.Player.PressConfirmTrade();                   // was _gm.ConfirmInformedTrade()
+        _gm.Player.PressConfirmTrade();
     }
 
-    // ----------------------------------------------------------------------
-    // Event handlers (signatures updated to the new core's events)
-    // ----------------------------------------------------------------------
+    // event handlers
 
     private void HandlePhaseChanged(GamePhase phase, bool isPlayerTurn)
     {
@@ -217,7 +211,7 @@ public class GameUI : MonoBehaviour
                 break;
 
             case GamePhase.CardDrawn:
-                // Only show the drawn card on the human's turn — never leak the AI's draw.
+                // only show the drawn card on the human's turn, never leak the AI's draw
                 if (isPlayerTurn) drawnCardView.SetActive(true);
                 break;
 
@@ -239,22 +233,22 @@ public class GameUI : MonoBehaviour
 
     private void HandleCardDrawn(Card card)
     {
-        if (!_gm.IsPlayerTurn) return;                    // guard: hide AI's drawn card
-        drawnCardImage.sprite = _deck.SpriteFor(card);    // was card.sprite
+        if (!_gm.IsPlayerTurn) return;                    // guard: hide the AI's drawn card
+        drawnCardImage.sprite = _deck.SpriteFor(card);
         RefreshDiscardDisplay();
     }
 
     private void HandleSlotRevealed(int side, int index, Card card)
     {
         if (!_gm.IsPlayerTurn) return;
-        slotRevealedImage.sprite = _deck.SpriteFor(card); // was slot.Card.sprite
+        slotRevealedImage.sprite = _deck.SpriteFor(card);
         slotRevealedUI.SetActive(true);
         HideAllArrows();
     }
 
     private void HandleSlotsSwapped()
     {
-        // No visual needed — slot visibility is reconciled by GameManager.SyncViews().
+        // no visual needed; slot visibility is reconciled by GameManager.SyncViews
     }
 
     private void HandleInformedTradeReady(Card opponentCard, Card ownCard)
@@ -268,7 +262,7 @@ public class GameUI : MonoBehaviour
 
     private void HandleMatchResolved(int side, int index, Card card, bool success, bool byPlayer)
     {
-        // The matched card going to discard is public info — safe to flash for both sides.
+        // the matched card going to discard is public info, so it's safe to flash for both sides
         if (_matchFlash != null) StopCoroutine(_matchFlash);
         _matchFlash = StartCoroutine(FlashMatch(_deck.SpriteFor(card)));
         if (success) RefreshDiscardDisplay();
@@ -314,10 +308,8 @@ public class GameUI : MonoBehaviour
             sessionScoreText.text = $"{t.PlayerWins} - {t.AiWins}";
     }
 
-    // ----------------------------------------------------------------------
     // ISMCTS debug panels
-    // ----------------------------------------------------------------------
-    
+
     private void HandleAiSearchDecision(IsmctsReport report)
     {
         if (ismctsRunStatsText)
@@ -329,8 +321,8 @@ public class GameUI : MonoBehaviour
         MoveStat runnerUp = default;
         bool hasChosen = false, hasRunnerUp = false;
 
-        // Moves is sorted by visits descending; pick out the flagged chosen row and the
-        // highest-visit row that isn't it, wherever each happens to sit in the ranking.
+        // Moves is sorted by visits descending; pick the flagged chosen row and the
+        // highest-visit row that isn't it, wherever each sits in the ranking
         foreach (var m in report.Moves)
         {
             if (m.IsChosen && !hasChosen) { chosen = m; hasChosen = true; continue; }
@@ -362,8 +354,7 @@ public class GameUI : MonoBehaviour
         ismctsDecisionText.text = sb.ToString();
     }
 
-    /// <summary>Aggregate numbers for the search that just ran — what the AI is actually
-    /// running with, not a per-move breakdown (that's ismctsDecisionText's job).</summary>
+    // aggregate numbers for the search that just ran, not a per-move breakdown
     private string FormatRunStats(IsmctsReport report)
     {
         var sb = new System.Text.StringBuilder();
@@ -376,9 +367,7 @@ public class GameUI : MonoBehaviour
         return sb.ToString();
     }
 
-    // ----------------------------------------------------------------------
-    // Helpers (unchanged from the original, except for the new data sources)
-    // ----------------------------------------------------------------------
+    // helpers
 
     private IEnumerator FlashMatch(Sprite sprite)
     {
@@ -393,7 +382,7 @@ public class GameUI : MonoBehaviour
     private void ShowInitialPeek()
     {
         if (_gm == null || _gm.State == null) return;
-        var (a, b) = _gm.PeekInitialIds();                 // was _gm.GetPlayerSlots()[0/1].Card
+        var (a, b) = _gm.PeekInitialIds();
         peekCardLeft.sprite = _deck.SpriteFor(a);
         peekCardRight.sprite = _deck.SpriteFor(b);
         initialCardsView.SetActive(true);
@@ -408,13 +397,13 @@ public class GameUI : MonoBehaviour
 
     private void RefreshDiscardDisplay()
     {
-        Card top = _gm.State.TopDiscard;                   // discard now lives in GameState
+        Card top = _gm.State.TopDiscard;                   // discard lives in GameState
         discardTopImage.sprite = top.IsNone ? emptyDiscardSprite : _deck.SpriteFor(top);
     }
 
     private void ShowPowerPrompt()
     {
-        switch (_gm.State.PowerStep)                        // was _gm.CurrentPowerStep
+        switch (_gm.State.PowerStep)
         {
             case PowerStep.LookingOwn:
                 ShowArrows(playerOnly: true, opponentOnly: false);

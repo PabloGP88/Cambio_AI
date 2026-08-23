@@ -19,7 +19,7 @@ public class Deck : MonoBehaviour
 
     public Sprite SpriteFor(Card c) => c.IsNone ? cardBack : SpriteForId(c.Id);
 
-    /// <summary>Real-game shuffle (uses Unity Random). GameState does deterministic reshuffles itself.</summary>
+    // real-game shuffle using Unity Random; GameState handles its own deterministic reshuffles
     public int[] BuildShuffledDeck()
     {
         int n = Card.DeckSize;

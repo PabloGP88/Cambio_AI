@@ -27,24 +27,24 @@ public class GameManager : MonoBehaviour
 
     private IAgent _ai;
 
-    // --- View events (the only thing GameUI needs to know about) ---
+    // view events, the only thing GameUI needs to know about
     public event Action<GamePhase, bool> OnPhaseChanged;          // phase, isPlayerTurn
     public event Action<Card> OnCardDrawn;                        // active side's drawn card
-    public event Action<int, int, Card> OnSlotRevealed;          // side, index(+zone via lookup), card
+    public event Action<int, int, Card> OnSlotRevealed;          // side, index with zone via lookup, card
     public event Action<int, int, Card, bool, bool> OnMatchResolved; // side, index, card, success, byPlayer
     public event Action<bool> OnAwaitingGiveCard;                 // byPlayer
     public event Action OnGiveCardDone;
     public event Action<Card, Card> OnInformedTradeReady;         // opponent card, own card
     public event Action<bool, int> OnPenaltyAdded;                // forPlayer, index
     public event Action OnSlotsSwapped;
-    public event Action<int> OnGameOver;                          // winnerSide (-1 draw)
+    public event Action<int> OnGameOver;                          // winnerSide, -1 draw
     public event Action<CommandType, bool, int> OnCommandApplied;
     public event Action<GameEffect, int> OnEffectApplied;
 
     private bool _aiRoutineActive;
     private bool _aiReactiveSnapUsed;   // AI may reactive-snap at most once per opponent turn
-    public event Action<IsmctsReport> OnAiSearchDecision;  // once, when a move has been chosen
-    public event Action<string> OnAiNarration; // Tell player whats going on
+    public event Action<IsmctsReport> OnAiSearchDecision;  // fired once, when a move has been chosen
+    public event Action<string> OnAiNarration; // tell the player what's going on
     public event Action<BeliefReport> OnAiBeliefSnapshot;
     public bool AiUsesBayesian => aiUseBayesianLayer;
 
@@ -91,7 +91,7 @@ public class GameManager : MonoBehaviour
             concrete.OnBeliefSnapshot += r => OnAiBeliefSnapshot?.Invoke(r);
         
         SyncViews();
-        OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn); // -> GameUI shows opening peek
+        OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn); // GameUI shows the opening peek
     }
 
     private void InitSlotViews(CardSlot[] slots, int side, Zone zone)
@@ -109,11 +109,11 @@ public class GameManager : MonoBehaviour
         {
             DispatchEffect(fx);
             _ai?.Observe(fx, iAmActor: actorSide == GameState.AISide);
-            OnEffectApplied?.Invoke(fx, actorSide);  // Keep track who applied for csv graphs
+            OnEffectApplied?.Invoke(fx, actorSide);  // record who applied it, for CSV graphs
         }
 
         if (State.IsPlayerTurn != pre.Turn)
-            _aiReactiveSnapUsed = false;   // new turn -> the AI may reactive-snap once again
+            _aiReactiveSnapUsed = false;   // new turn, so the AI may reactive-snap once again
 
         if (State.Phase != pre.Phase || State.IsPlayerTurn != pre.Turn || State.PowerStep != pre.Step)
             OnPhaseChanged?.Invoke(State.Phase, State.IsPlayerTurn);
@@ -134,9 +134,7 @@ public class GameManager : MonoBehaviour
         MaybePromptAiSnap();
     }
     
-    // ----------------------------------------------------------------------
-    // Submit
-    // ----------------------------------------------------------------------
+    // submit
 
     public void SubmitPlayer(GameCommand cmd)
     {
@@ -204,9 +202,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // ----------------------------------------------------------------------
-    // Player-facing helpers (called by PlayerInput / GameUI)
-    // ----------------------------------------------------------------------
+    // player-facing helpers, called by PlayerInput and GameUI
 
     public void StartPlay()
     {
@@ -216,8 +212,8 @@ public class GameManager : MonoBehaviour
         MaybePromptAI();
     }
 
-    /// <summary>Tell the view to show swap arrows. No state mutation: SwapDrawnIntoSlot is
-    /// already legal in CardDrawn, so this is purely a cosmetic phase signal for the UI.</summary>
+    /* tell the view to show swap arrows. no state mutation, since SwapDrawnIntoSlot is already
+       legal in CardDrawn, so this is purely a cosmetic phase signal for the UI */
     public void EnterSwapSelection()
     {
         if (State == null || State.Phase != GamePhase.CardDrawn) return;
@@ -244,7 +240,7 @@ public class GameManager : MonoBehaviour
         return arr[s.Index];
     }
 
-    /// <summary>The player's allowed opening peek: their first two hand cards.</summary>
+    // the player's allowed opening peek: their first two hand cards
     public (Card, Card) PeekInitialIds()
     {
         Card a = State.GetCard(new SlotRef(GameState.PlayerSide, Zone.Hand, 0));
@@ -254,11 +250,9 @@ public class GameManager : MonoBehaviour
 
     public int GetScore(bool player) => State.Score(player ? GameState.PlayerSide : GameState.AISide);
 
-    // ----------------------------------------------------------------------
-    // View reconciliation + AI loop
-    // ----------------------------------------------------------------------
+    // view reconciliation and AI loop
 
-    /// <summary>Make every slot view match the truth: visible iff it holds a card. Clears arming.</summary>
+    // make every slot view match the truth: visible when it holds a card; clears arming
     private void SyncViews()
     {
         Player?.ClearArmed(); 
@@ -323,9 +317,9 @@ public class GameManager : MonoBehaviour
         p == GamePhase.SelectingSwapSlot || p == GamePhase.UsingPower;
 
     // ReSharper disable Unity.PerformanceAnalysis
-    /// <summary>Drives the AI's decision as a coroutine. The search itself runs in one
-    /// shot (no mid-search reporting), so this mainly exists to keep the IAgent contract
-    /// uniform and to let aiThinkSeconds pace the reveal after the move is decided.</summary>
+    /* drives the AI's decision as a coroutine. the search itself runs in one shot with no
+       mid-search reporting, so this mainly keeps the IAgent contract uniform and lets
+       aiThinkSeconds pace the reveal after the move is decided */
     private IEnumerator RunAiTurn()
     {
         _aiRoutineActive = true;
@@ -348,10 +342,10 @@ public class GameManager : MonoBehaviour
         if (State.AwaitingGiveCard && State.GiveByPlayer) yield break;      // human still owes a give
 
         var legalNow = State.LegalMoves();
-        if (legalNow.Count == 0) yield break;      // nothing the AI can legally do — don't spin
+        if (legalNow.Count == 0) yield break;      // nothing the AI can legally do, don't spin
         if (!legalNow.Contains(chosen))
         {
-            MaybePromptAI(); yield break;           // state changed under us; re-decide once
+            MaybePromptAI(); yield break;           // state changed under us, re-decide once
         }
 
         SubmitAI(chosen);

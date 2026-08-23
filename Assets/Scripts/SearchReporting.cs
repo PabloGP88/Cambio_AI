@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-/// <summary>One legal root move plus the stats its node accumulated. This is what the UI renders.</summary>
+// one legal root move plus the stats its node accumulated; this is what the UI renders
 public struct MoveStat
 {
     public GameCommand Move;
@@ -10,7 +10,7 @@ public struct MoveStat
     public bool IsChosen;
 }
 
-/// <summary>Snapshot of the root taken once a move has been chosen. Fired via OnSearchDecision.</summary>
+// snapshot of the root taken once a move has been chosen; fired via OnSearchDecision
 public class IsmctsReport
 {
     public int Side;
@@ -21,6 +21,6 @@ public class IsmctsReport
     public int NodesExpanded;
     public int ExpandedRootMoves;
     public int LegalCount;
-    public List<MoveStat> Moves;   // sorted by visits desc
+    public List<MoveStat> Moves;   // sorted by visits descending
     public bool IsFinal;
 }

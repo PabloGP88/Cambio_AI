@@ -4,26 +4,22 @@ using System.Collections.Generic;
 
 public interface IAgent
 {
-    /// <summary>Return the single command this agent wants to play right now. Blocking —
-    /// runs the whole search in one call. Kept for callers that don't care about live
-    /// progress (tests, non-Unity contexts).</summary>
+    /* return the single command this agent wants to play right now. blocking, since it
+       runs the whole search in one call. kept for callers that don't need live progress
+       such as tests or non-Unity contexts */
     GameCommand ChooseMove(GameState publicState);
 
-    /// <summary>
-    /// Same decision as ChooseMove, but exposed as a coroutine so a caller (GameManager)
-    /// can run it and get OnSearchDecision once the search finishes. Calls onDecided
-    /// exactly once, with the chosen command. Agents with nothing else to do can just do:
-    ///   onDecided(ChooseMove(state)); yield break;
-    /// </summary>
+    /* same decision as ChooseMove, but exposed as a coroutine so a caller such as
+       GameManager can run it and get onDecided once the search finishes. onDecided is
+       called exactly once with the chosen command */
     IEnumerator ChooseMoveRoutine(GameState publicState, Action<GameCommand> onDecided);
 
-    /// <summary>Fired once per decision, with the final tree state: which move was chosen,
-    /// its stats, and how it compares to the runner-up.</summary>
+    // fired once per decision with the final tree state: chosen move, its stats, runner-up
     event Action<IsmctsReport> OnSearchDecision;
 
-    /// <summary>Observe an applied effect. Used to update beliefs. iAmActor = this agent caused it.</summary>
+    // observe an applied effect to update beliefs; iAmActor means this agent caused it
     void Observe(GameEffect effect, bool iAmActor);
 
-    /// <summary>Reset per-game memory.</summary>
+    // reset per-game memory
     void OnNewGame(int mySide, GameState initialState);
 }
